@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
-import { AlertCircle, CheckCircle } from "lucide-react"
+import { AlertCircle, CheckCircle, Upload } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { CouncilMember } from "@/actions/council-actions"
@@ -28,6 +28,7 @@ export function ConcejalForm({ concejal = null }: { concejal?: CouncilMember | n
     isActive: concejal?.isActive ?? true,
   })
   const [image, setImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(concejal?.image_url || null)
 
   useEffect(() => {
     const fetchBloques = async () => {
@@ -65,7 +66,15 @@ export function ConcejalForm({ concejal = null }: { concejal?: CouncilMember | n
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files && files[0]) {
-      setImage(files[0])
+      const file = files[0]
+      setImage(file)
+
+      // Crear preview de la imagen
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
     }
   }
 
@@ -199,7 +208,22 @@ export function ConcejalForm({ concejal = null }: { concejal?: CouncilMember | n
 
           <div className="space-y-2">
             <Label htmlFor="image">Foto</Label>
-            <Input id="image" name="image" type="file" accept="image/*" onChange={handleImageChange} />
+            <div className="flex items-center space-x-4">
+              <Input
+                id="image"
+                name="image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="flex-1"
+              />
+              {imagePreview && (
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200">
+                  <img src={imagePreview || "/placeholder.svg"} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+              )}
+            </div>
+            <p className="text-sm text-gray-500">Formatos soportados: JPG, PNG, GIF. Tamaño máximo: 5MB</p>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -219,7 +243,16 @@ export function ConcejalForm({ concejal = null }: { concejal?: CouncilMember | n
               Cancelar
             </Button>
             <Button type="submit" className="bg-[#0e4c7d] hover:bg-[#0a3d68]" disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : concejal ? "Actualizar" : "Crear"}
+              {isSubmitting ? (
+                <>
+                  <Upload className="w-4 h-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : concejal ? (
+                "Actualizar"
+              ) : (
+                "Crear"
+              )}
             </Button>
           </div>
         </form>

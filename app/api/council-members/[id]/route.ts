@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
+import { uploadFile } from "@/lib/storage"
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -63,11 +64,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Convertir blockId a número o null
     const block_id = blockId && blockId !== "-1" ? Number.parseInt(blockId) : null
 
-    // TODO: Manejar subida de imagen si existe
-    const image_url = null
+    // Obtener la imagen actual del concejal
+    const currentMember = await sql`
+      SELECT image_url FROM council_members WHERE id = ${id}
+    `
+
+    let image_url = currentMember[0]?.image_url || null
+
+    // Subir nueva imagen si se proporciona
     if (image && image.size > 0) {
-      // Aquí iría la lógica de subida de imagen (Cloudinary, etc.)
-      console.log("Imagen recibida:", image.name)
+      try {
+        console.log("Subiendo imagen a Cloudinary:", image.name)
+        image_url = await uploadFile(image, "concejales")
+        console.log("Imagen subida exitosamente:", image_url)
+      } catch (uploadError) {
+        console.error("Error subiendo imagen:", uploadError)
+        return NextResponse.json({ error: "Error al subir la imagen" }, { status: 500 })
+      }
     }
 
     const result = await sql`
@@ -76,6 +89,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           position = ${position},
           block_id = ${block_id},
           mandate = ${mandate},
+          image_url = ${image_url},
           bio = ${bio},
           is_active = ${isActive}
       WHERE id = ${id}

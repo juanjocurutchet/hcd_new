@@ -11,30 +11,37 @@ cloudinary.config({
 // Función para subir un archivo a Cloudinary
 export async function uploadFile(file: File, folder = ""): Promise<string> {
   try {
+    console.log(`Iniciando subida de archivo: ${file.name}, tamaño: ${file.size} bytes`)
+
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
-
-    // Crear un stream a partir del buffer
-    const stream = require("stream")
-    const bufferStream = new stream.PassThrough()
-    bufferStream.end(buffer)
 
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: folder || "hcd-lasflores",
           resource_type: "auto",
+          transformation: [
+            { width: 400, height: 400, crop: "fill", gravity: "face" },
+            { quality: "auto", fetch_format: "auto" },
+          ],
         },
         (error, result) => {
           if (error) {
+            console.error("Error en Cloudinary:", error)
             reject(error)
             return
           }
-          resolve(result?.secure_url || "")
+          if (result) {
+            console.log("Archivo subido exitosamente:", result.secure_url)
+            resolve(result.secure_url)
+          } else {
+            reject(new Error("No se recibió resultado de Cloudinary"))
+          }
         },
       )
 
-      bufferStream.pipe(uploadStream)
+      uploadStream.end(buffer)
     })
   } catch (error) {
     console.error("Error al subir archivo a Cloudinary:", error)
