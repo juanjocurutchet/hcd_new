@@ -8,26 +8,16 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, CheckCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type { CouncilMember } from "@/actions/council-actions"
 
-interface Concejal {
-  id: number
-  name: string
-  position: string
-  block_id: number
-  blockName?: string
-  mandate: string
-  image_url: string
-  bio: string
-  isActive: boolean
-}
-
-export function ConcejalForm({ concejal = null }: { concejal?: Concejal | null }) {
+export function ConcejalForm({ concejal = null }: { concejal?: CouncilMember | null }) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const [bloques, setBloques] = useState<{ id: number; name: string }[]>([])
   const [formData, setFormData] = useState({
     name: concejal?.name || "",
@@ -79,10 +69,11 @@ export function ConcejalForm({ concejal = null }: { concejal?: Concejal | null }
     }
   }
 
-  const handleSubmit = async (e: { preventDefault: () => void }) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
     setError("")
+    setSuccess("")
 
     try {
       const data = new FormData()
@@ -109,8 +100,13 @@ export function ConcejalForm({ concejal = null }: { concejal?: Concejal | null }
         throw new Error(errorData.error || "Error al guardar el concejal")
       }
 
-      router.push("/admin-panel/concejales")
-      router.refresh()
+      setSuccess(concejal ? "Concejal actualizado correctamente" : "Concejal creado correctamente")
+
+      // Redirigir después de un breve delay para mostrar el mensaje de éxito
+      setTimeout(() => {
+        router.push("/admin-panel/concejales")
+        router.refresh()
+      }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ocurrió un error desconocido")
     } finally {
@@ -126,6 +122,13 @@ export function ConcejalForm({ concejal = null }: { concejal?: Concejal | null }
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {success && (
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">{success}</AlertDescription>
             </Alert>
           )}
 

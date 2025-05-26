@@ -168,12 +168,36 @@ export async function getCouncilMemberById(id: number): Promise<CouncilMember | 
   }
 }
 
+export async function getPoliticalBlockById(id: number): Promise<PoliticalBlock | null> {
+  try {
+    const result = await sql`
+      SELECT id, name, president_id, color
+      FROM political_blocks
+      WHERE id = ${id}
+    `
+    return (result[0] as unknown as PoliticalBlock) || null
+  } catch (error) {
+    console.error("Error getting political block by id:", error)
+    return null
+  }
+}
+
 export async function deleteCouncilMember(id: number) {
   try {
     await sql`DELETE FROM council_members WHERE id = ${id}`
     return { success: true }
   } catch (error) {
     console.error("Error deleting council member:", error)
+    throw error
+  }
+}
+
+export async function deletePoliticalBlock(id: number) {
+  try {
+    await sql`DELETE FROM political_blocks WHERE id = ${id}`
+    return { success: true }
+  } catch (error) {
+    console.error("Error deleting political block:", error)
     throw error
   }
 }
