@@ -2,102 +2,67 @@
 
 import { sql } from "@/lib/db"
 
-export type Document = {
+export type DocumentType = {
   id: number
   title: string
-  number: string | null
-  type: "ordenanza" | "decreto" | "resolucion" | "comunicacion"
-  content: string | null
-  file_url: string | null
-  published_at: Date | null
+  type: string
+  number: string
+  published_at: Date
   isPublished: boolean
+  file_url?: string
+  description?: string
 }
 
-export type Session = {
-  id: number
-  date: Date
-  type: "ordinaria" | "extraordinaria" | "especial" | "preparatoria"
-  agenda_file_url: string | null
-  minutes_file_url: string | null
-  audio_file_url: string | null
-  video_url: string | null
-}
-
-export async function getLatestDocuments(limit = 10, type?: string): Promise<Document[]> {
+export async function searchDocuments(query?: string): Promise<DocumentType[]> {
   try {
-    // Usar la sintaxis de plantilla etiquetada (tagged template) con casting de tipo
-    if (type) {
+    if (!query || query.trim() === "") {
       const result = await sql`
-        SELECT id, title, number, type, content, file_url, published_at
+        SELECT id, title, type, number, published_at, is_published as "isPublished", file_url, description
         FROM documents
-        WHERE is_published = true AND type = ${type}
         ORDER BY published_at DESC
-        LIMIT ${limit}
+        LIMIT 50
       `
-      return result as unknown as Document[]
-    } else {
-      const result = await sql`
-        SELECT id, title, number, type, content, file_url, published_at
-        FROM documents
-        WHERE is_published = true
-        ORDER BY published_at DESC
-        LIMIT ${limit}
-      `
-      return result as unknown as Document[]
+      return result as unknown as DocumentType[]
     }
-  } catch (error) {
-    console.error("Error fetching latest documents:", error)
-    return []
-  }
-}
 
-export async function getLatestSessions(limit = 6): Promise<Session[]> {
-  try {
+    const searchTerm = `%${query}%`
     const result = await sql`
-      SELECT id, date, type, agenda_file_url, minutes_file_url, audio_file_url, video_url
-      FROM sessions
-      WHERE is_published = true
-      ORDER BY date DESC
-      LIMIT ${limit}
-    `
-
-    return result as unknown as Session[]
-  } catch (error) {
-    console.error("Error fetching latest sessions:", error)
-    return []
-  }
-}
-
-export async function searchDocuments({
-  searchTerm = "",
-  type,
-  limit = 10,
-  offset = 0,
-  onlyPublished = true,
-}: {
-  searchTerm?: string
-  type?: string
-  limit?: number
-  offset?: number
-  onlyPublished?: boolean
-}): Promise<Document[]> {
-  try {
-    const result = await sql`
-      SELECT id, title, number, type, content, file_url, published_at
+      SELECT id, title, type, number, published_at, is_published as "isPublished", file_url, description
       FROM documents
-      WHERE (${onlyPublished} IS NOT NULL AND is_published = ${onlyPublished})
-      AND (${type} IS NULL OR type = ${type})
-      AND (
-        title ILIKE ${"%" + searchTerm + "%"}
-        OR COALESCE(content, '') ILIKE ${"%" + searchTerm + "%"}
-        OR COALESCE(number, '') ILIKE ${"%" + searchTerm + "%"}
-      )
+      WHERE title ILIKE ${searchTerm}
+         OR type ILIKE ${searchTerm}
+         OR number ILIKE ${searchTerm}
+         OR description ILIKE ${searchTerm}
       ORDER BY published_at DESC
-      LIMIT ${limit} OFFSET ${offset}
+      LIMIT 50
     `
-    return result as unknown as Document[]
+    return result as unknown as DocumentType[]
   } catch (error) {
-    console.error(`Error searching documents:`, error)
+    console.error("Error searching documents:", error)
     return []
+  }
+}
+
+export async function getDocumentById(id: number): Promise<DocumentType | null> {
+  try {
+    const result = await sql`
+      SELECT id, title, type, number, published_at, is_published as "isPublished", file_url, description
+      FROM documents
+      WHERE id = ${id}
+    `
+    return (result[0] as unknown as DocumentType) || null
+  } catch (error) {
+    console.error("Error getting document by id:", error)
+    return null
+  }
+}
+
+export async function deleteDocument(id: number) {
+  try {
+    await sql`DELETE FROM documents WHERE id = ${id}`
+    return { success: true }
+  } catch (error) {
+    console.error("Error deleting document:", error)
+    throw error
   }
 }

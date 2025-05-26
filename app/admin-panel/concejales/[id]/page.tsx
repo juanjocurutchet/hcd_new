@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
 import { getAllCouncilMembers } from "@/actions/council-actions"
+import { Key, ReactElement, JSXElementConstructor, ReactNode, ReactPortal } from "react"
 
 export default async function ConcejalesPage() {
   const concejales = await getAllCouncilMembers()
@@ -65,7 +66,7 @@ export default async function ConcejalesPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {concejales.map((concejal) => (
+              {concejales.map((concejal: { id: Key | null | undefined; name: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; blockName: any; position: any; isActive: any }) => (
                 <tr key={concejal.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{concejal.name}</div>

@@ -1,31 +1,33 @@
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { sql } from "@/lib/db"
 import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
+import { sql } from "@/lib/db-singleton"
 
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Contraseña", type: "password" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null
+        }
+
         try {
-          if (!credentials?.email || !credentials?.password) {
-            return null
-          }
+          console.log("Intentando autenticar usuario:", credentials.email)
 
           // Buscar el usuario
           const userResults = await sql`
             SELECT id, name, email, password, role
             FROM users
             WHERE email = ${credentials.email}
-          `
+          ` as { id: number; name: string; email: string; password: string; role: string }[]
 
           if (userResults.length === 0) {
+            console.log("Usuario no encontrado")
             return null
           }
 
@@ -35,27 +37,18 @@ export const authOptions: NextAuthOptions = {
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
 
           if (!isPasswordValid) {
+            console.log("Contraseña incorrecta")
             return null
           }
 
-          // Generar token JWT
-          const token = jwt.sign(
-            {
-              id: user.id,
-              email: user.email,
-              role: user.role,
-            },
-            process.env.JWT_SECRET || "your-secret-key",
-            { expiresIn: "1d" },
-          )
+          console.log("Usuario autenticado exitosamente:", user.email)
 
-          // Retornar el usuario con el token JWT
           return {
             id: user.id.toString(),
             name: user.name,
             email: user.email,
             role: user.role,
-            jwt: token,
+            jwt: "", // Provide a valid JWT or placeholder if not available
           }
         } catch (error) {
           console.error("Error en authorize:", error)
@@ -66,29 +59,24 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 24 * 60 * 60, // 24 hours
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
         token.role = user.role
-        token.jwt = user.jwt
       }
       return token
     },
     async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string
+      if (token) {
+        session.user.id = token.sub!
         session.user.role = token.role as string
-        session.user.jwt = token.jwt as string
       }
       return session
     },
   },
   pages: {
     signIn: "/admin/login",
-    error: "/admin/login",
   },
-  debug: process.env.NODE_ENV === "development",
+  secret: process.env.NEXTAUTH_SECRET,
 }

@@ -70,7 +70,6 @@ export async function getAllCouncilMembers(): Promise<CouncilMember[]> {
         cm.name
     `
 
-    console.log("Council members result:", result)
     return result as unknown as CouncilMember[]
   } catch (error) {
     console.error("Error fetching all council members:", error)
@@ -95,14 +94,12 @@ export async function getPoliticalBlocks(): Promise<PoliticalBlock[]> {
 
 export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
   try {
-    // Eliminamos la columna 'description' que no existe en la tabla
     const blocks = await sql`
       SELECT id, name, president_id, color
       FROM political_blocks
       ORDER BY name
     `
 
-    // Para cada bloque, obtener la cantidad de miembros
     const blocksWithCounts = await Promise.all(
       blocks.map(async (block) => {
         const countResult = await sql`
@@ -144,5 +141,39 @@ export async function getCouncilMembersByBlock(blockId: number): Promise<Council
   } catch (error) {
     console.error(`Error fetching council members for block ${blockId}:`, error)
     return []
+  }
+}
+
+export async function getCouncilMemberById(id: number): Promise<CouncilMember | null> {
+  try {
+    const result = await sql`
+      SELECT
+        cm.id,
+        cm.name,
+        cm.position,
+        cm.block_id,
+        pb.name as "blockName",
+        cm.mandate,
+        cm.image_url,
+        cm.bio,
+        cm.is_active as "isActive"
+      FROM council_members cm
+      LEFT JOIN political_blocks pb ON cm.block_id = pb.id
+      WHERE cm.id = ${id}
+    `
+    return (result[0] as unknown as CouncilMember) || null
+  } catch (error) {
+    console.error("Error getting council member by id:", error)
+    return null
+  }
+}
+
+export async function deleteCouncilMember(id: number) {
+  try {
+    await sql`DELETE FROM council_members WHERE id = ${id}`
+    return { success: true }
+  } catch (error) {
+    console.error("Error deleting council member:", error)
+    throw error
   }
 }

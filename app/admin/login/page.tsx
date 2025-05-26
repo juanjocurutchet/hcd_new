@@ -1,33 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { signIn, useSession } from "next-auth/react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import type React from "react"
+
+import { useState } from "react"
+import { signIn } from "next-auth/react"
 
 export default function LoginPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { data: session, status } = useSession()
-  const callbackUrl = searchParams.get("from") || "/admin-panel/dashboard"
-
   const [email, setEmail] = useState("admin@hcdlasflores.gob.ar")
   const [password, setPassword] = useState("admin123")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  // If already authenticated, redirect to dashboard
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.push("/admin-panel/dashboard")
-    }
-  }, [status, router])
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
@@ -41,75 +25,64 @@ export default function LoginPage() {
 
       if (result?.error) {
         setError("Credenciales inválidas")
-        setIsLoading(false)
-        return
+      } else {
+        // Redirección manual después del login exitoso
+        window.location.href = "/admin-panel/dashboard"
       }
-
-      router.push("/admin-panel/dashboard")
     } catch (error) {
       setError("Ocurrió un error al iniciar sesión")
+    } finally {
       setIsLoading(false)
     }
   }
 
-  // If loading session, show loading state
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-t-blue-500 border-b-blue-500 border-l-gray-200 border-r-gray-200 rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-lg font-medium text-gray-700">Cargando...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // If already authenticated, don't render the form
-  if (status === "authenticated") {
-    return null
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Iniciar sesión</CardTitle>
-          <CardDescription className="text-center">Panel de administración del HCD Las Flores</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="admin@hcdlasflores.gob.ar"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full bg-[#0e4c7d] hover:bg-[#0a3d68]" disabled={isLoading}>
-              {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 className="text-2xl font-bold text-center mb-6">Iniciar sesión</h1>
+        <p className="text-center text-gray-600 mb-6">Panel de administración del HCD Las Flores</p>
+
+        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              placeholder="admin@hcdlasflores.gob.ar"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              Contraseña
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
+          </button>
+        </form>
+      </div>
     </div>
   )
 }

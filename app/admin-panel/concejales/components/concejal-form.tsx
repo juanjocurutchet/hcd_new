@@ -1,25 +1,27 @@
 "use client"
 
-import { useState, useEffect, SetStateAction } from "react"
+import type React from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Concejal {
-  id?: string;
-  name?: string;
-  position?: string;
-  blockId?: number;
-  mandate?: string;
-  bio?: string;
-  isActive?: boolean;
+  id: number
+  name: string
+  position: string
+  block_id: number
+  blockName?: string
+  mandate: string
+  image_url: string
+  bio: string
+  isActive: boolean
 }
 
 export function ConcejalForm({ concejal = null }: { concejal?: Concejal | null }) {
@@ -30,7 +32,7 @@ export function ConcejalForm({ concejal = null }: { concejal?: Concejal | null }
   const [formData, setFormData] = useState({
     name: concejal?.name || "",
     position: concejal?.position || "",
-    blockId: concejal?.blockId?.toString() || "",
+    blockId: concejal?.block_id?.toString() || "",
     mandate: concejal?.mandate || "",
     bio: concejal?.bio || "",
     isActive: concejal?.isActive ?? true,
@@ -56,7 +58,7 @@ export function ConcejalForm({ concejal = null }: { concejal?: Concejal | null }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target
-    const checked = (e.target as HTMLInputElement).checked; // Only relevant for checkboxes
+    const checked = (e.target as HTMLInputElement).checked
     setFormData({
       ...formData,
       [name]: type === "checkbox" ? checked : value,
@@ -198,11 +200,13 @@ export function ConcejalForm({ concejal = null }: { concejal?: Concejal | null }
           </div>
 
           <div className="flex items-center space-x-2">
-            <Checkbox
+            <input
+              type="checkbox"
               id="isActive"
               name="isActive"
               checked={formData.isActive}
-              onCheckedChange={(checked: any) => setFormData({ ...formData, isActive: Boolean(checked) })}
+              onChange={handleChange}
+              className="rounded border-gray-300"
             />
             <Label htmlFor="isActive">Activo</Label>
           </div>

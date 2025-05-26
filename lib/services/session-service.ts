@@ -1,208 +1,179 @@
-import { db } from "@/lib/db"
-import { sessions } from "@/lib/db/schema"
-import { eq, desc, and, sql } from "drizzle-orm"
-import { uploadFile, deleteFile } from "@/lib/storage"
+"use server"
 
-export type SessionInput = {
-  date: Date
-  type: "ordinaria" | "extraordinaria" | "especial" | "preparatoria"
-  agendaFile?: File | null
-  minutesFile?: File | null
-  audioFile?: File | null
-  videoUrl?: string
-  isPublished?: boolean
-}
+import { sql } from "@/lib/db"
 
-export type SessionUpdateInput = Partial<SessionInput> & {
+export type CouncilMember = {
   id: number
+  name: string
+  position: string | null
+  block_id: number
+  blockName?: string
+  mandate: string | null
+  image_url: string | null
+  bio: string | null
+  is_active: boolean
+  isActive?: boolean
 }
 
-export async function createSession(input: SessionInput) {
-  let agendaFileUrl = null
-  let minutesFileUrl = null
-  let audioFileUrl = null
-
-  if (input.agendaFile) {
-    agendaFileUrl = await uploadFile(input.agendaFile, "sessions/agendas")
-  }
-
-  if (input.minutesFile) {
-    minutesFileUrl = await uploadFile(input.minutesFile, "sessions/minutes")
-  }
-
-  if (input.audioFile) {
-    audioFileUrl = await uploadFile(input.audioFile, "sessions/audios")
-  }
-
-  const result = await db
-    .insert(sessions)
-    .values({
-      date: input.date,
-      type: input.type,
-      agendaFileUrl,
-      minutesFileUrl,
-      audioFileUrl,
-      videoUrl: input.videoUrl,
-      isPublished: input.isPublished ?? true,
-    })
-    .returning()
-
-  return result[0]
+export type PoliticalBlock = {
+  id: number
+  name: string
+  president_id: number | null
+  color: string | null
+  description?: string
+  memberCount?: number
 }
 
-export async function updateSession(input: SessionUpdateInput) {
-  const currentSession = await db.select().from(sessions).where(eq(sessions.id, input.id)).limit(1)
+export async function getActiveCouncilMembers(): Promise<CouncilMember[]> {
+  try {
+    const result = await sql`
+      SELECT id, name, position, block_id, mandate, image_url, bio, is_active
+      FROM council_members
+      WHERE is_active = true
+      ORDER BY
+        CASE
+          WHEN position = 'Presidente' THEN 1
+          WHEN position LIKE 'Vicepresidente%' THEN 2
+          ELSE 3
+        END,
+        name
+    `
 
-  if (!currentSession.length) {
-    throw new Error("Sesión no encontrada")
+    return result as unknown as CouncilMember[]
+  } catch (error) {
+    console.error("Error fetching active council members:", error)
+    return []
   }
-
-  let agendaFileUrl = currentSession[0].agendaFileUrl
-  let minutesFileUrl = currentSession[0].minutesFileUrl
-  let audioFileUrl = currentSession[0].audioFileUrl
-
-  if (input.agendaFile) {
-    if (agendaFileUrl) {
-      await deleteFile(agendaFileUrl)
-    }
-    agendaFileUrl = await uploadFile(input.agendaFile, "sessions/agendas")
-  }
-
-  if (input.minutesFile) {
-    if (minutesFileUrl) {
-      await deleteFile(minutesFileUrl)
-    }
-    minutesFileUrl = await uploadFile(input.minutesFile, "sessions/minutes")
-  }
-
-  if (input.audioFile) {
-    if (audioFileUrl) {
-      await deleteFile(audioFileUrl)
-    }
-    audioFileUrl = await uploadFile(input.audioFile, "sessions/audios")
-  }
-
-  const result = await db
-    .update(sessions)
-    .set({
-      date: input.date,
-      type: input.type,
-      agendaFileUrl,
-      minutesFileUrl,
-      audioFileUrl,
-      videoUrl: input.videoUrl,
-      isPublished: input.isPublished,
-      updatedAt: new Date(),
-    })
-    .where(eq(sessions.id, input.id))
-    .returning()
-
-  return result[0]
 }
 
-export async function deleteSession(id: number) {
-  const session = await db.select().from(sessions).where(eq(sessions.id, id)).limit(1)
+export async function getAllCouncilMembers(): Promise<CouncilMember[]> {
+  try {
+    const result = await sql`
+      SELECT
+        cm.id,
+        cm.name,
+        cm.position,
+        cm.block_id,
+        pb.name as "blockName",
+        cm.mandate,
+        cm.image_url,
+        cm.bio,
+        cm.is_active as "isActive"
+      FROM council_members cm
+      LEFT JOIN political_blocks pb ON cm.block_id = pb.id
+      ORDER BY
+        CASE
+          WHEN cm.position = 'Presidente' THEN 1
+          WHEN cm.position LIKE 'Vicepresidente%' THEN 2
+          ELSE 3
+        END,
+        cm.name
+    `
 
-  if (!session.length) {
-    throw new Error("Sesión no encontrada")
+    return result as unknown as CouncilMember[]
+  } catch (error) {
+    console.error("Error fetching all council members:", error)
+    return []
   }
-
-  // Eliminar archivos asociados
-  if (session[0].agendaFileUrl) {
-    await deleteFile(session[0].agendaFileUrl)
-  }
-
-  if (session[0].minutesFileUrl) {
-    await deleteFile(session[0].minutesFileUrl)
-  }
-
-  if (session[0].audioFileUrl) {
-    await deleteFile(session[0].audioFileUrl)
-  }
-
-  await db.delete(sessions).where(eq(sessions.id, id))
-
-  return { success: true }
 }
 
-export async function getSessionById(id: number) {
-  const result = await db.select().from(sessions).where(eq(sessions.id, id)).limit(1)
-  return result[0] || null
+export async function getPoliticalBlocks(): Promise<PoliticalBlock[]> {
+  try {
+    const result = await sql`
+      SELECT id, name, president_id, color
+      FROM political_blocks
+      ORDER BY name
+    `
+
+    return result as unknown as PoliticalBlock[]
+  } catch (error) {
+    console.error("Error fetching political blocks:", error)
+    return []
+  }
 }
 
-export async function getSessions({
-  year,
-  type,
-  limit = 10,
-  offset = 0,
-  onlyPublished = true,
-}: {
-  year?: number
-  type?: "ordinaria" | "extraordinaria" | "especial" | "preparatoria"
-  limit?: number
-  offset?: number
-  onlyPublished?: boolean
-}) {
-  let query = db.select().from(sessions)
+export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
+  try {
+    const blocks = await sql`
+      SELECT id, name, president_id, color
+      FROM political_blocks
+      ORDER BY name
+    `
 
-  const conditions = []
+    const blocksWithCounts = await Promise.all(
+      blocks.map(async (block) => {
+        const countResult = await sql`
+          SELECT COUNT(*) as count
+          FROM council_members
+          WHERE block_id = ${block.id} AND is_active = true
+        `
 
-  if (onlyPublished) {
-    conditions.push(eq(sessions.isPublished, true))
+        return {
+          ...block,
+          memberCount: countResult[0]?.count || 0,
+        }
+      }),
+    )
+
+    return blocksWithCounts as unknown as PoliticalBlock[]
+  } catch (error) {
+    console.error("Error fetching all political blocks:", error)
+    return []
   }
-
-  if (type) {
-    conditions.push(eq(sessions.type, type))
-  }
-
-  if (year) {
-    const startDate = new Date(year, 0, 1)
-    const endDate = new Date(year, 11, 31, 23, 59, 59)
-    conditions.push(sql`${sessions.date} >= ${startDate}`)
-    conditions.push(sql`${sessions.date} <= ${endDate}`)
-  }
-
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions))
-  }
-
-  const result = await query.orderBy(desc(sessions.date)).limit(limit).offset(offset)
-
-  return result
 }
 
-export async function getSessionsCount({
-  year,
-  type,
-  onlyPublished = true,
-}: {
-  year?: number
-  type?: "ordinaria" | "extraordinaria" | "especial" | "preparatoria"
-  onlyPublished?: boolean
-}) {
-  let query = db.select({ count: sql<number>`count(*)` }).from(sessions)
+export async function getCouncilMembersByBlock(blockId: number): Promise<CouncilMember[]> {
+  try {
+    const result = await sql`
+      SELECT id, name, position, block_id, mandate, image_url, bio, is_active
+      FROM council_members
+      WHERE block_id = ${blockId} AND is_active = true
+      ORDER BY
+        CASE
+          WHEN position = 'Presidente' THEN 1
+          WHEN position LIKE 'Vicepresidente%' THEN 2
+          ELSE 3
+        END,
+        name
+    `
 
-  const conditions = []
-
-  if (onlyPublished) {
-    conditions.push(eq(sessions.isPublished, true))
+    return result as unknown as CouncilMember[]
+  } catch (error) {
+    console.error(`Error fetching council members for block ${blockId}:`, error)
+    return []
   }
+}
 
-  if (type) {
-    conditions.push(eq(sessions.type, type))
+export async function getCouncilMemberById(id: number): Promise<CouncilMember | null> {
+  try {
+    const result = await sql`
+      SELECT
+        cm.id,
+        cm.name,
+        cm.position,
+        cm.block_id,
+        pb.name as "blockName",
+        cm.mandate,
+        cm.image_url,
+        cm.bio,
+        cm.is_active as "isActive"
+      FROM council_members cm
+      LEFT JOIN political_blocks pb ON cm.block_id = pb.id
+      WHERE cm.id = ${id}
+    `
+    return (result[0] as unknown as CouncilMember) || null
+  } catch (error) {
+    console.error("Error getting council member by id:", error)
+    return null
   }
+}
 
-  if (year) {
-    const startDate = new Date(year, 0, 1)
-    const endDate = new Date(year, 11, 31, 23, 59, 59)
-    conditions.push(sql`${sessions.date} >= ${startDate}`)
-    conditions.push(sql`${sessions.date} <= ${endDate}`)
+export async function deleteCouncilMember(id: number) {
+  try {
+    await sql`DELETE FROM council_members WHERE id = ${id}`
+    return { success: true }
+  } catch (error) {
+    console.error("Error deleting council member:", error)
+    throw error
   }
-
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions))
-  }
-
-  const result = await query
-  return result[0].count
 }
