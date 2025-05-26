@@ -1,12 +1,12 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
-import { getSessions } from "@/lib/services/session-service"
+import { getSessions, Session } from "@/lib/services/session-service"
 import { formatDate } from "@/lib/utils/format"
 import { Key } from "react"
 
 export default async function SesionesPage() {
-  const sesiones = await getSessions({ limit: 10, offset: 0 })
+  const sesiones = await getSessions()
 
   return (
     <div className="space-y-6">
@@ -57,7 +57,7 @@ export default async function SesionesPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {sesiones.map((sesion: { id: Key | null | undefined; date: string | Date; type: string; agendaFileUrl: any; minutesFileUrl: any; audioFileUrl: any; isPublished: any }) => (
+          {sesiones.map((sesion: Session) => (
               <tr key={sesion.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{sesion.date ? formatDate(sesion.date) : "-"}</div>

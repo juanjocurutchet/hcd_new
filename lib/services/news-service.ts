@@ -1,8 +1,10 @@
-import { db } from "@/lib/db"
+import { sql } from "drizzle-orm"
 import { news } from "@/lib/db/schema"
-import { eq, desc, sql, and } from "drizzle-orm"
+import { eq, desc, and } from "drizzle-orm"
 import { uploadFile, deleteFile } from "@/lib/storage"
 import slugify from "slugify"
+import { db } from "../db-singleton"
+import { News } from "@/types/news"
 
 export type NewsInput = {
   title: string
@@ -125,12 +127,14 @@ export async function getLatestNews(limit = 10, offset = 0, onlyPublished = true
 }
 
 export async function searchNews(searchTerm: string, limit = 10, offset = 0) {
+  const query = searchTerm.replace(/ /g, " & ")
+
   const result = await db
     .select()
     .from(news)
     .where(
       and(
-        sql`to_tsvector('spanish', ${news.title} || ' ' || ${news.content}) @@ to_tsquery('spanish', ${searchTerm.replace(/ /g, " & ")})`,
+        sql<boolean>`to_tsvector('spanish', ${news.title} || ' ' || ${news.content}) @@ to_tsquery('spanish', ${query})`,
         eq(news.isPublished, true),
       ),
     )
@@ -154,18 +158,12 @@ export async function getNewsCount(onlyPublished = true) {
   return result[0].count
 }
 
-export async function getAllNews({ limit = 10, offset = 0, onlyPublished = false } = {}) {
-  // Construir condiciones
-  const conditions = onlyPublished ? [eq(news.isPublished, true)] : []
-
-  // Ejecutar consulta con condiciones
-  const result = await db
+export async function getAllNews(limit = 10, offset = 0): Promise<News[]> {
+  return await db
     .select()
     .from(news)
-    .where(and(...conditions))
     .orderBy(desc(news.publishedAt))
     .limit(limit)
     .offset(offset)
-
-  return result
 }
+

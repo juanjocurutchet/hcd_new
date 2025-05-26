@@ -1,8 +1,10 @@
-import { db } from "@/lib/db"
+
 import { users } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+
 import bcrypt from "bcryptjs"
+import { eq } from "drizzle-orm"
 import jwt from "jsonwebtoken"
+import { db } from "./db-singleton"
 
 // Obtener la clave secreta JWT del entorno
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"

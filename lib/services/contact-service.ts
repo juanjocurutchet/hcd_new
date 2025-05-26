@@ -1,7 +1,7 @@
-import { db } from "@/lib/db"
-import { contactMessages } from "@/lib/db/schema"
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, InferSelectModel } from "drizzle-orm"
 import { sendEmail } from "@/lib/email"
+import { db } from "../db-singleton"
+import { contactMessages } from "../db/schema"
 
 export type ContactMessageInput = {
   name: string
@@ -12,6 +12,8 @@ export type ContactMessageInput = {
   message: string
   type?: string
 }
+
+type ContactMessage = InferSelectModel<typeof contactMessages>
 
 export async function createContactMessage(input: ContactMessageInput) {
   const result = await db
@@ -46,14 +48,27 @@ export async function createContactMessage(input: ContactMessageInput) {
   return result[0]
 }
 
-export async function getContactMessages(limit = 10, offset = 0, type?: string) {
-  let query = db.select().from(contactMessages)
+export async function getContactMessages(
+  limit = 10,
+  offset = 0,
+  type?: string
+): Promise<ContactMessage[]> {
+  const baseQuery = db
+    .select()
+    .from(contactMessages)
+    .orderBy(desc(contactMessages.createdAt))
+    .limit(limit)
+    .offset(offset)
 
-  if (type) {
-    query = query.where(eq(contactMessages.type, type))
-  }
-
-  const result = await query.orderBy(desc(contactMessages.createdAt)).limit(limit).offset(offset)
+  const result = type
+    ? await db
+        .select()
+        .from(contactMessages)
+        .where(eq(contactMessages.type, type))
+        .orderBy(desc(contactMessages.createdAt))
+        .limit(limit)
+        .offset(offset)
+    : await baseQuery
 
   return result
 }

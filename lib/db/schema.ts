@@ -48,6 +48,7 @@ export const politicalBlocks = pgTable("political_blocks", {
   name: varchar("name", { length: 255 }).notNull(),
   presidentId: integer("president_id"),
   color: varchar("color", { length: 50 }),
+  description: text("description"), // ✅ NUEVO
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -90,14 +91,14 @@ export const documents = pgTable("documents", {
 export const sessions = pgTable("sessions", {
   id: serial("id").primaryKey(),
   date: timestamp("date").notNull(),
-  type: sessionTypeEnum("type").notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
   agendaFileUrl: varchar("agenda_file_url", { length: 255 }),
   minutesFileUrl: varchar("minutes_file_url", { length: 255 }),
   audioFileUrl: varchar("audio_file_url", { length: 255 }),
   videoUrl: varchar("video_url", { length: 255 }),
-  isPublished: boolean("is_published").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  isPublished: boolean("is_published").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 })
 
 export const contactMessages = pgTable("contact_messages", {

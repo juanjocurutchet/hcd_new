@@ -1,10 +1,11 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
-import { getAllCouncilMembers } from "@/actions/council-actions"
+import { getAllCouncilMembersWithBlock } from "@/actions/council-actions"
 
 export default async function ConcejalesPage() {
-  const concejales = await getAllCouncilMembers()
+  const concejales = await getAllCouncilMembersWithBlock()
+
 
   console.log("Concejales en la página:", concejales)
 

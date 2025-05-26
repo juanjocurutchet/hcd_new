@@ -4,9 +4,10 @@ import { PlusCircle } from "lucide-react"
 import { getAllNews } from "@/lib/services/news-service"
 import { formatDate } from "@/lib/utils/format"
 import { Key, ReactElement, JSXElementConstructor, ReactNode, ReactPortal } from "react"
+import { News } from "@/types/news"
 
 export default async function NoticiasPage() {
-  const noticias = await getAllNews({ limit: 10, offset: 0 })
+  const noticias = await getAllNews(10, 0)
 
   return (
     <div className="space-y-6">
@@ -51,14 +52,14 @@ export default async function NoticiasPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {noticias.map((noticia: { id: Key | null | undefined; title: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; publishedAt: string | Date; isPublished: any }) => (
+          {noticias.map((noticia: News) => (
               <tr key={noticia.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{noticia.title}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-500">
-                    {noticia.publishedAt ? formatDate(noticia.publishedAt) : "-"}
+                  {noticia.publishedAt ? formatDate(noticia.publishedAt) : "-"}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

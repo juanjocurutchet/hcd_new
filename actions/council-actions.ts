@@ -1,203 +1,90 @@
-"use server"
-
-import { sql } from "@/lib/db"
+import { db } from "@/lib/db-singleton"
+import { councilMembers, politicalBlocks } from "@/lib/db/schema"
+import { eq, asc, sql, and } from "drizzle-orm"
 
 export type CouncilMember = {
   id: number
   name: string
+  imageUrl: string | null
+  createdAt: Date
+  updatedAt: Date
   position: string | null
-  block_id: number
-  blockName?: string
+  blockId: number | null
   mandate: string | null
-  image_url: string | null
   bio: string | null
-  is_active: boolean
-  isActive?: boolean
+  isActive: boolean
+}
+
+export type CouncilMemberWithBlock = CouncilMember & {
+  blockName: string | null
 }
 
 export type PoliticalBlock = {
   id: number
   name: string
-  president_id: number | null
+  presidentId: number | null
   color: string | null
-  description?: string
-  memberCount?: number
+  description: string | null
+  memberCount: number
 }
 
-export async function getActiveCouncilMembers(): Promise<CouncilMember[]> {
+export async function getAllCouncilMembersWithBlock(): Promise<CouncilMemberWithBlock[]> {
   try {
-    const result = await sql`
-      SELECT id, name, position, block_id, mandate, image_url, bio, is_active
-      FROM council_members
-      WHERE is_active = true
-      ORDER BY
-        CASE
-          WHEN position = 'Presidente' THEN 1
-          WHEN position LIKE 'Vicepresidente%' THEN 2
-          ELSE 3
-        END,
-        name
-    `
+    const result = await db
+      .select({
+        id: councilMembers.id,
+        name: councilMembers.name,
+        imageUrl: councilMembers.imageUrl,
+        createdAt: councilMembers.createdAt,
+        updatedAt: councilMembers.updatedAt,
+        position: councilMembers.position,
+        blockId: councilMembers.blockId,
+        mandate: councilMembers.mandate,
+        bio: councilMembers.bio,
+        isActive: councilMembers.isActive,
+        blockName: politicalBlocks.name,
+      })
+      .from(councilMembers)
+      .leftJoin(politicalBlocks, eq(councilMembers.blockId, politicalBlocks.id))
+      .orderBy(asc(councilMembers.name))
 
-    return result as unknown as CouncilMember[]
+    return result
   } catch (error) {
-    console.error("Error fetching active council members:", error)
-    return []
-  }
-}
-
-export async function getAllCouncilMembers(): Promise<CouncilMember[]> {
-  try {
-    const result = await sql`
-      SELECT
-        cm.id,
-        cm.name,
-        cm.position,
-        cm.block_id,
-        pb.name as "blockName",
-        cm.mandate,
-        cm.image_url,
-        cm.bio,
-        cm.is_active as "isActive"
-      FROM council_members cm
-      LEFT JOIN political_blocks pb ON cm.block_id = pb.id
-      ORDER BY
-        CASE
-          WHEN cm.position = 'Presidente' THEN 1
-          WHEN cm.position LIKE 'Vicepresidente%' THEN 2
-          ELSE 3
-        END,
-        cm.name
-    `
-
-    return result as unknown as CouncilMember[]
-  } catch (error) {
-    console.error("Error fetching all council members:", error)
-    return []
-  }
-}
-
-export async function getPoliticalBlocks(): Promise<PoliticalBlock[]> {
-  try {
-    const result = await sql`
-      SELECT id, name, president_id, color
-      FROM political_blocks
-      ORDER BY name
-    `
-
-    return result as unknown as PoliticalBlock[]
-  } catch (error) {
-    console.error("Error fetching political blocks:", error)
+    console.error("Error fetching council members with block:", error)
     return []
   }
 }
 
 export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
   try {
-    const blocks = await sql`
-      SELECT id, name, president_id, color
-      FROM political_blocks
-      ORDER BY name
-    `
+    const blocks = await db
+      .select({
+        id: politicalBlocks.id,
+        name: politicalBlocks.name,
+        presidentId: politicalBlocks.presidentId,
+        color: politicalBlocks.color,
+        description: politicalBlocks.description,
+      })
+      .from(politicalBlocks)
+      .orderBy(asc(politicalBlocks.name))
 
     const blocksWithCounts = await Promise.all(
-      blocks.map(async (block) => {
-        const countResult = await sql`
-          SELECT COUNT(*) as count
-          FROM council_members
-          WHERE block_id = ${block.id} AND is_active = true
-        `
+      blocks.map(async (block): Promise<PoliticalBlock> => {
+        const countResult = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(councilMembers)
+          .where(and(eq(councilMembers.blockId, block.id), eq(councilMembers.isActive, true)))
 
         return {
           ...block,
-          memberCount: countResult[0]?.count || 0,
+          memberCount: Number(countResult[0].count || 0),
         }
       }),
     )
 
-    return blocksWithCounts as unknown as PoliticalBlock[]
+    return blocksWithCounts
   } catch (error) {
-    console.error("Error fetching all political blocks:", error)
+    console.error("Error fetching political blocks:", error)
     return []
-  }
-}
-
-export async function getCouncilMembersByBlock(blockId: number): Promise<CouncilMember[]> {
-  try {
-    const result = await sql`
-      SELECT id, name, position, block_id, mandate, image_url, bio, is_active
-      FROM council_members
-      WHERE block_id = ${blockId} AND is_active = true
-      ORDER BY
-        CASE
-          WHEN position = 'Presidente' THEN 1
-          WHEN position LIKE 'Vicepresidente%' THEN 2
-          ELSE 3
-        END,
-        name
-    `
-
-    return result as unknown as CouncilMember[]
-  } catch (error) {
-    console.error(`Error fetching council members for block ${blockId}:`, error)
-    return []
-  }
-}
-
-export async function getCouncilMemberById(id: number): Promise<CouncilMember | null> {
-  try {
-    const result = await sql`
-      SELECT
-        cm.id,
-        cm.name,
-        cm.position,
-        cm.block_id,
-        pb.name as "blockName",
-        cm.mandate,
-        cm.image_url,
-        cm.bio,
-        cm.is_active as "isActive"
-      FROM council_members cm
-      LEFT JOIN political_blocks pb ON cm.block_id = pb.id
-      WHERE cm.id = ${id}
-    `
-    return (result[0] as unknown as CouncilMember) || null
-  } catch (error) {
-    console.error("Error getting council member by id:", error)
-    return null
-  }
-}
-
-export async function getPoliticalBlockById(id: number): Promise<PoliticalBlock | null> {
-  try {
-    const result = await sql`
-      SELECT id, name, president_id, color
-      FROM political_blocks
-      WHERE id = ${id}
-    `
-    return (result[0] as unknown as PoliticalBlock) || null
-  } catch (error) {
-    console.error("Error getting political block by id:", error)
-    return null
-  }
-}
-
-export async function deleteCouncilMember(id: number) {
-  try {
-    await sql`DELETE FROM council_members WHERE id = ${id}`
-    return { success: true }
-  } catch (error) {
-    console.error("Error deleting council member:", error)
-    throw error
-  }
-}
-
-export async function deletePoliticalBlock(id: number) {
-  try {
-    await sql`DELETE FROM political_blocks WHERE id = ${id}`
-    return { success: true }
-  } catch (error) {
-    console.error("Error deleting political block:", error)
-    throw error
   }
 }

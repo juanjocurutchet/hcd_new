@@ -1,52 +1,37 @@
 "use server"
 
-import { sql } from "@/lib/db"
+import {
+  getAllNews as fetchAll,
+  getNewsById as fetchById,
+  deleteNews as remove
+} from "@/services/newsService"
 
-export type News = {
-  id: number
-  title: string
-  content: string
-  excerpt: string
-  published_at: Date
-  isPublished: boolean
-  image_url?: string
-  author?: string
-}
+import { News } from "@/types/news"
 
 export async function getAllNews(): Promise<News[]> {
   try {
-    const result = await sql`
-      SELECT id, title, content, excerpt, published_at, is_published as "isPublished", image_url, author
-      FROM news
-      ORDER BY published_at DESC
-    `
-    return result as unknown as News[]
+    return await fetchAll()
   } catch (error) {
-    console.error("Error fetching all news:", error)
+    console.error("Error al obtener noticias:", error)
     return []
   }
 }
 
 export async function getNewsById(id: number): Promise<News | null> {
   try {
-    const result = await sql`
-      SELECT id, title, content, excerpt, published_at, is_published as "isPublished", image_url, author
-      FROM news
-      WHERE id = ${id}
-    `
-    return (result[0] as unknown as News) || null
+    return await fetchById(id)
   } catch (error) {
-    console.error("Error getting news by id:", error)
+    console.error("Error al obtener noticia:", error)
     return null
   }
 }
 
-export async function deleteNews(id: number) {
+export async function deleteNews(id: number): Promise<{ success: boolean }> {
   try {
-    await sql`DELETE FROM news WHERE id = ${id}`
+    await remove(id)
     return { success: true }
   } catch (error) {
-    console.error("Error deleting news:", error)
-    throw error
+    console.error("Error al eliminar noticia:", error)
+    return { success: false }
   }
 }

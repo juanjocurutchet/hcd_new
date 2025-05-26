@@ -13,7 +13,7 @@
     "import-documents": "ts-node scripts/import-documents.ts"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^0.6.0",
+    "@neondatabase/serverless": "^1.0.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-avatar": "^1.1.10",
@@ -31,8 +31,7 @@
     "cloudinary": "^2.6.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "drizzle-kit": "^0.18.1",
-    "drizzle-orm": "^0.28.0",
+    "drizzle-orm": "^0.43.1",
     "embla-carousel-react": "^8.6.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.511.0",
@@ -55,10 +54,11 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/date-fns": "^2.6.3",
-    "@types/node": "^20",
+    "@types/node": "^20.17.50",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^16.5.0",
+    "drizzle-kit": "^0.31.1",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
     "ts-node": "^10.9.2",

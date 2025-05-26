@@ -1,6 +1,9 @@
 "use server"
 
 import { sql } from "@/lib/db"
+import { desc } from "drizzle-orm" // Adjust the import path if needed
+import { sessions } from "../db/schema"
+import { db } from "../db-singleton"
 
 export type CouncilMember = {
   id: number
@@ -22,6 +25,19 @@ export type PoliticalBlock = {
   color: string | null
   description?: string
   memberCount?: number
+}
+
+export type Session = {
+  id: number
+  date: Date
+  type: string
+  agendaFileUrl: string | null
+  minutesFileUrl: string | null
+  audioFileUrl: string | null
+  videoUrl: string | null
+  isPublished: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 export async function getActiveCouncilMembers(): Promise<CouncilMember[]> {
@@ -175,5 +191,19 @@ export async function deleteCouncilMember(id: number) {
   } catch (error) {
     console.error("Error deleting council member:", error)
     throw error
+  }
+}
+
+export async function getSessions(): Promise<Session[]> {
+  try {
+    const result = await db
+      .select()
+      .from(sessions)
+      .orderBy(desc(sessions.date))
+
+    return result as Session[]
+  } catch (error) {
+    console.error("Error fetching sessions:", error)
+    return []
   }
 }

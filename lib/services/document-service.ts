@@ -1,7 +1,8 @@
-import { db } from "@/lib/db"
 import { documents } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { uploadFile, deleteFile } from "@/lib/storage"
+import { db } from "../db-singleton"
+import { DocumentType } from "@/types/document"
 
 export type DocumentInput = {
   title: string
@@ -101,3 +102,29 @@ export async function deleteDocument(id: number) {
 
   return { success: true }
 }
+
+export async function getDocuments({
+  limit = 10,
+  offset = 0,
+  onlyPublished = true,
+}: {
+  limit?: number
+  offset?: number
+  onlyPublished?: boolean
+}): Promise<DocumentType[]> {
+  const conditions = onlyPublished
+    ? sql`WHERE is_published = true`
+    : sql``
+
+  const result = await db.execute<DocumentType>(sql`
+    SELECT id, title, type, number, published_at, is_published as "isPublished"
+    FROM documents
+    ${conditions}
+    ORDER BY published_at DESC
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `)
+
+  return result.rows
+}
+
