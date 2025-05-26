@@ -4,17 +4,21 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set")
 }
 
-console.log("Creando nueva conexión a la base de datos...")
+// Crear una única instancia de conexión
+const sql = neon(process.env.DATABASE_URL)
 
-export const sql = neon(process.env.DATABASE_URL)
+// Pool de conexiones simple para evitar crear demasiadas conexiones
+let connectionCount = 0
+const MAX_CONNECTIONS = 10
 
-export async function testConnection() {
-  try {
-    const result = await sql`SELECT 1 as test`
-    console.log("Conexión a la base de datos exitosa:", result)
-    return true
-  } catch (error) {
-    console.error("Error de conexión a la base de datos:", error)
-    return false
+const createConnection = () => {
+  if (connectionCount >= MAX_CONNECTIONS) {
+    console.warn(`Máximo de conexiones alcanzado: ${connectionCount}`)
+  } else {
+    connectionCount++
+    console.log(`Creando nueva conexión a la base de datos... (${connectionCount}/${MAX_CONNECTIONS})`)
   }
+  return sql
 }
+
+export { createConnection as sql }
