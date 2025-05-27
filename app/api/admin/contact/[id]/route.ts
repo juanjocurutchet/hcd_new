@@ -2,20 +2,24 @@ import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { isAdmin } from "@/lib/utils/server-utils"
 
+async function validateAdminAndId(request: NextRequest, idParam: string) {
+  if (!(await isAdmin(request))) {
+    return { error: NextResponse.json({ error: "No autorizado" }, { status: 403 }) }
+  }
+
+  const id = Number.parseInt(idParam)
+  if (isNaN(id)) {
+    return { error: NextResponse.json({ error: "ID inválido" }, { status: 400 }) }
+  }
+
+  return { id }
+}
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // Verificar permisos
-    if (!isAdmin(request)) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
-    }
+    const { id, error } = await validateAdminAndId(request, params.id)
+    if (error) return error
 
-    const id = Number.parseInt(params.id)
-
-    if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
-    }
-
-    // Obtener mensaje
     const messages = await sql`
       SELECT id, name, email, phone, organization, subject, message, type, is_read, created_at
       FROM contact_messages
@@ -35,18 +39,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // Verificar permisos
-    if (!isAdmin(request)) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
-    }
+    const { id, error } = await validateAdminAndId(request, params.id)
+    if (error) return error
 
-    const id = Number.parseInt(params.id)
-
-    if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
-    }
-
-    // Marcar como leído
     await sql`
       UPDATE contact_messages
       SET is_read = true, updated_at = NOW()
@@ -62,18 +57,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // Verificar permisos
-    if (!isAdmin(request)) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
-    }
+    const { id, error } = await validateAdminAndId(request, params.id)
+    if (error) return error
 
-    const id = Number.parseInt(params.id)
-
-    if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
-    }
-
-    // Eliminar mensaje
     await sql`
       DELETE FROM contact_messages
       WHERE id = ${id}

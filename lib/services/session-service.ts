@@ -1,9 +1,10 @@
 "use server"
 
 import { sql } from "@/lib/db"
-import { desc } from "drizzle-orm" // Adjust the import path if needed
+import { desc } from "drizzle-orm"
 import { sessions } from "../db/schema"
 import { db } from "../db-singleton"
+import { uploadFile } from "../storage"
 
 export type CouncilMember = {
   id: number
@@ -54,7 +55,6 @@ export async function getActiveCouncilMembers(): Promise<CouncilMember[]> {
         END,
         name
     `
-
     return result as unknown as CouncilMember[]
   } catch (error) {
     console.error("Error fetching active council members:", error)
@@ -85,7 +85,6 @@ export async function getAllCouncilMembers(): Promise<CouncilMember[]> {
         END,
         cm.name
     `
-
     return result as unknown as CouncilMember[]
   } catch (error) {
     console.error("Error fetching all council members:", error)
@@ -100,7 +99,6 @@ export async function getPoliticalBlocks(): Promise<PoliticalBlock[]> {
       FROM political_blocks
       ORDER BY name
     `
-
     return result as unknown as PoliticalBlock[]
   } catch (error) {
     console.error("Error fetching political blocks:", error)
@@ -117,7 +115,7 @@ export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
     `
 
     const blocksWithCounts = await Promise.all(
-      blocks.map(async (block) => {
+      (blocks as PoliticalBlock[]).map(async (block) => {
         const countResult = await sql`
           SELECT COUNT(*) as count
           FROM council_members
@@ -126,12 +124,12 @@ export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
 
         return {
           ...block,
-          memberCount: countResult[0]?.count || 0,
+          memberCount: Number(countResult[0]?.count) || 0,
         }
-      }),
+      })
     )
 
-    return blocksWithCounts as unknown as PoliticalBlock[]
+    return blocksWithCounts
   } catch (error) {
     console.error("Error fetching all political blocks:", error)
     return []
@@ -152,7 +150,6 @@ export async function getCouncilMembersByBlock(blockId: number): Promise<Council
         END,
         name
     `
-
     return result as unknown as CouncilMember[]
   } catch (error) {
     console.error(`Error fetching council members for block ${blockId}:`, error)
@@ -205,5 +202,90 @@ export async function getSessions(): Promise<Session[]> {
   } catch (error) {
     console.error("Error fetching sessions:", error)
     return []
+  }
+}
+
+export async function getSessionById(id: number): Promise<Session | null> {
+  try {
+    const result = await sql`
+      SELECT *
+      FROM sessions
+      WHERE id = ${id}
+    `
+    return (result[0] as Session) || null
+  } catch (error) {
+    console.error("Error getting session by id:", error)
+    return null
+  }
+}
+
+export async function updateSession(session: {
+  id: number
+  date: Date
+  type: string
+  agendaFile?: File | null
+  minutesFile?: File | null
+  audioFile?: File | null
+  videoUrl?: string
+  isPublished: boolean
+}) {
+  try {
+    const result = await sql`
+      SELECT agenda_file_url, minutes_file_url, audio_file_url
+      FROM sessions
+      WHERE id = ${session.id}
+    `
+
+    const currentData = (result as any[])[0] || {}
+
+    let agendaFileUrl = currentData.agenda_file_url || null
+    let minutesFileUrl = currentData.minutes_file_url || null
+    let audioFileUrl = currentData.audio_file_url || null
+
+    if (session.agendaFile && session.agendaFile.size > 0) {
+      agendaFileUrl = await uploadFile(session.agendaFile, "sesiones")
+    }
+
+    if (session.minutesFile && session.minutesFile.size > 0) {
+      minutesFileUrl = await uploadFile(session.minutesFile, "sesiones")
+    }
+
+    if (session.audioFile && session.audioFile.size > 0) {
+      audioFileUrl = await uploadFile(session.audioFile, "sesiones")
+    }
+
+    const updated = await sql`
+      UPDATE sessions
+      SET
+        date = ${session.date},
+        type = ${session.type},
+        agenda_file_url = ${agendaFileUrl},
+        minutes_file_url = ${minutesFileUrl},
+        audio_file_url = ${audioFileUrl},
+        video_url = ${session.videoUrl},
+        is_published = ${session.isPublished},
+        updated_at = NOW()
+      WHERE id = ${session.id}
+      RETURNING *
+    `
+
+    return (updated as any[])[0]
+  } catch (error) {
+    console.error("Error updating session:", error)
+    throw error
+  }
+}
+
+export async function deleteSession(id: number) {
+  try {
+    await sql`
+      DELETE FROM sessions
+      WHERE id = ${id}
+    `
+    console.log(`Session with ID ${id} deleted successfully.`)
+    return { success: true }
+  } catch (error) {
+    console.error("Error deleting session:", error)
+    throw error
   }
 }

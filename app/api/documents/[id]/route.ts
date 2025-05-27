@@ -2,10 +2,22 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDocumentById, updateDocument, deleteDocument } from "@/lib/services/document-service"
 import { isAdmin } from "@/lib/utils/server-utils"
 
+async function validateAdminAndId(request: NextRequest, idParam: string) {
+  if (!(await isAdmin(request))) {
+    return { error: NextResponse.json({ error: "No autorizado" }, { status: 403 }) }
+  }
+
+  const id = Number.parseInt(idParam)
+  if (isNaN(id)) {
+    return { error: NextResponse.json({ error: "ID inválido" }, { status: 400 }) }
+  }
+
+  return { id }
+}
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const id = Number.parseInt(params.id)
-
     if (isNaN(id)) {
       return NextResponse.json({ error: "ID inválido" }, { status: 400 })
     }
@@ -25,16 +37,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const id = Number.parseInt(params.id)
-
-    if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
-    }
-
-    // Verificar permisos
-    if (!isAdmin(request)) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
-    }
+    const { id, error } = await validateAdminAndId(request, params.id)
+    if (error) return error
 
     const formData = await request.formData()
 
@@ -68,16 +72,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const id = Number.parseInt(params.id)
-
-    if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
-    }
-
-    // Verificar permisos
-    if (!isAdmin(request)) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
-    }
+    const { id, error } = await validateAdminAndId(request, params.id)
+    if (error) return error
 
     await deleteDocument(id)
 
