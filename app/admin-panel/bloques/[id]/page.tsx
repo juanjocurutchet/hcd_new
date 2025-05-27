@@ -1,22 +1,25 @@
 import { notFound } from "next/navigation"
-import { getPoliticalBlockById, getAllCouncilMembers } from "@/actions/council-actions"
+import { getAllCouncilMembers } from "@/lib/services/session-service"
 import BloqueForm from "../components/bloque-form"
-
-
+import { getPoliticalBlockById } from "@/lib/services/political-blocks-service"
 
 interface PageProps {
-  params: Promise<{ id: string }>
+  params: {
+    id: string
+  }
 }
 
 export default async function EditarBloquePage({ params }: PageProps) {
-  const { id } = await params
-  const blockId = Number.parseInt(id)
+  const blockId = Number.parseInt(params.id)
 
   if (isNaN(blockId)) {
     notFound()
   }
 
-  const [bloque, concejales] = await Promise.all([getPoliticalBlockById(blockId), getAllCouncilMembers()])
+  const [bloque, concejales] = await Promise.all([
+    getPoliticalBlockById(blockId),
+    getAllCouncilMembers(),
+  ])
 
   if (!bloque) {
     notFound()

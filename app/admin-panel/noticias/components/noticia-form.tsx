@@ -10,6 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useSession } from "next-auth/react"
+import { createNews, updateNews } from "@/actions/news-actions"
 
 interface Noticia {
   id?: string;
@@ -30,6 +32,7 @@ export function NoticiaForm({ noticia = null }: { noticia?: Noticia | null }) {
     isPublished: noticia?.isPublished || false,
   })
   const [image, setImage] = useState<File | null>(null)
+  const { data: session } = useSession()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target
@@ -58,22 +61,14 @@ export function NoticiaForm({ noticia = null }: { noticia?: Noticia | null }) {
       data.append("content", formData.content)
       data.append("excerpt", formData.excerpt)
       data.append("isPublished", formData.isPublished.toString())
-      data.append("authorId", "1") // Temporal, debería venir del usuario autenticado
       if (image) {
         data.append("image", image)
       }
 
-      const url = noticia ? `/api/news/${noticia.id}` : "/api/news/create"
-      const method = noticia ? "PUT" : "POST"
-
-      const response = await fetch(url, {
-        method,
-        body: data,
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Error al guardar la noticia")
+      if (noticia?.id) {
+        await updateNews(parseInt(noticia.id), data, session?.user?.id ?? "", session?.user?.role ?? "")
+      } else {
+        await createNews(data, session?.user?.id ?? "", session?.user?.role ?? "")
       }
 
       router.push("/admin-panel/noticias")

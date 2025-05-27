@@ -10,22 +10,23 @@ export type CouncilMember = {
   id: number
   name: string
   position: string | null
-  block_id: number
+  blockId: number
   blockName?: string
   mandate: string | null
-  image_url: string | null
+  imageUrl: string | null
   bio: string | null
-  is_active: boolean
-  isActive?: boolean
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 export type PoliticalBlock = {
   id: number
   name: string
-  president_id: number | null
+  presidentId: number | null
   color: string | null
-  description?: string
-  memberCount?: number
+  description: string | null
+  memberCount: number
 }
 
 export type Session = {
@@ -44,7 +45,7 @@ export type Session = {
 export async function getActiveCouncilMembers(): Promise<CouncilMember[]> {
   try {
     const result = await sql`
-      SELECT id, name, position, block_id, mandate, image_url, bio, is_active
+      SELECT id, name, position, block_id as "blockId", mandate, image_url as "imageUrl", bio, is_active as "isActive"
       FROM council_members
       WHERE is_active = true
       ORDER BY
@@ -55,7 +56,7 @@ export async function getActiveCouncilMembers(): Promise<CouncilMember[]> {
         END,
         name
     `
-    return result as unknown as CouncilMember[]
+    return result as CouncilMember[]
   } catch (error) {
     console.error("Error fetching active council members:", error)
     return []
@@ -69,10 +70,10 @@ export async function getAllCouncilMembers(): Promise<CouncilMember[]> {
         cm.id,
         cm.name,
         cm.position,
-        cm.block_id,
+        cm.block_id as "blockId",
         pb.name as "blockName",
         cm.mandate,
-        cm.image_url,
+        cm.image_url as "imageUrl",
         cm.bio,
         cm.is_active as "isActive"
       FROM council_members cm
@@ -85,7 +86,7 @@ export async function getAllCouncilMembers(): Promise<CouncilMember[]> {
         END,
         cm.name
     `
-    return result as unknown as CouncilMember[]
+    return result as CouncilMember[]
   } catch (error) {
     console.error("Error fetching all council members:", error)
     return []
@@ -95,11 +96,11 @@ export async function getAllCouncilMembers(): Promise<CouncilMember[]> {
 export async function getPoliticalBlocks(): Promise<PoliticalBlock[]> {
   try {
     const result = await sql`
-      SELECT id, name, president_id, color
+      SELECT id, name, president_id as "presidentId", color
       FROM political_blocks
       ORDER BY name
     `
-    return result as unknown as PoliticalBlock[]
+    return result as PoliticalBlock[]
   } catch (error) {
     console.error("Error fetching political blocks:", error)
     return []
@@ -109,7 +110,7 @@ export async function getPoliticalBlocks(): Promise<PoliticalBlock[]> {
 export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
   try {
     const blocks = await sql`
-      SELECT id, name, president_id, color
+      SELECT id, name, president_id as "presidentId", color
       FROM political_blocks
       ORDER BY name
     `
@@ -121,7 +122,6 @@ export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
           FROM council_members
           WHERE block_id = ${block.id} AND is_active = true
         `
-
         return {
           ...block,
           memberCount: Number(countResult[0]?.count) || 0,
@@ -139,7 +139,7 @@ export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
 export async function getCouncilMembersByBlock(blockId: number): Promise<CouncilMember[]> {
   try {
     const result = await sql`
-      SELECT id, name, position, block_id, mandate, image_url, bio, is_active
+      SELECT id, name, position, block_id as "blockId", mandate, image_url as "imageUrl", bio, is_active as "isActive"
       FROM council_members
       WHERE block_id = ${blockId} AND is_active = true
       ORDER BY
@@ -150,7 +150,7 @@ export async function getCouncilMembersByBlock(blockId: number): Promise<Council
         END,
         name
     `
-    return result as unknown as CouncilMember[]
+    return result as CouncilMember[]
   } catch (error) {
     console.error(`Error fetching council members for block ${blockId}:`, error)
     return []
@@ -164,30 +164,20 @@ export async function getCouncilMemberById(id: number): Promise<CouncilMember | 
         cm.id,
         cm.name,
         cm.position,
-        cm.block_id,
+        cm.block_id as "blockId",
         pb.name as "blockName",
         cm.mandate,
-        cm.image_url,
+        cm.image_url as "imageUrl",
         cm.bio,
         cm.is_active as "isActive"
       FROM council_members cm
       LEFT JOIN political_blocks pb ON cm.block_id = pb.id
       WHERE cm.id = ${id}
     `
-    return (result[0] as unknown as CouncilMember) || null
+    return (result[0] as CouncilMember) || null
   } catch (error) {
     console.error("Error getting council member by id:", error)
     return null
-  }
-}
-
-export async function deleteCouncilMember(id: number) {
-  try {
-    await sql`DELETE FROM council_members WHERE id = ${id}`
-    return { success: true }
-  } catch (error) {
-    console.error("Error deleting council member:", error)
-    throw error
   }
 }
 
@@ -269,7 +259,7 @@ export async function updateSession(session: {
       RETURNING *
     `
 
-    return (updated as any[])[0]
+    return (updated as Session[])[0]
   } catch (error) {
     console.error("Error updating session:", error)
     throw error
@@ -282,7 +272,6 @@ export async function deleteSession(id: number) {
       DELETE FROM sessions
       WHERE id = ${id}
     `
-    console.log(`Session with ID ${id} deleted successfully.`)
     return { success: true }
   } catch (error) {
     console.error("Error deleting session:", error)

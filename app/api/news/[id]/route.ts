@@ -1,42 +1,31 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getNewsById, updateNews, deleteNews } from "@/lib/services/news-service"
-import { isAdmin } from "@/lib/utils/server-utils"
 
-export async function GET(request: NextRequest, context: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const id = Number.parseInt(context.params.id)
+    const id = Number.parseInt(params.id)
+    if (isNaN(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 
-    if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
-    }
+    const noticia = await getNewsById(id)
+    if (!noticia) return NextResponse.json({ error: "Noticia no encontrada" }, { status: 404 })
 
-    const news = await getNewsById(id)
-
-    if (!news) {
-      return NextResponse.json({ error: "Noticia no encontrada" }, { status: 404 })
-    }
-
-    return NextResponse.json(news)
+    return NextResponse.json(noticia)
   } catch (error) {
-    console.error(`Error obteniendo noticia con id ${context.params.id}:`, error)
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+    console.error("GET error:", error)
+    return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
 
-export async function PUT(request: NextRequest, context: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const id = Number.parseInt(context.params.id)
+    const id = Number.parseInt(params.id)
+    if (isNaN(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
 
-    if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
-    }
-
-    if (!(await isAdmin(request))) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
-    }
+    const role = request.headers.get("x-user-role")
+    console.log("PUT x-user-role:", role)
+    if (role !== "admin") return NextResponse.json({ error: "No autorizado" }, { status: 403 })
 
     const formData = await request.formData()
-
     const title = formData.get("title") as string
     const content = formData.get("content") as string
     const excerpt = formData.get("excerpt") as string | null
@@ -54,28 +43,22 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
 
     return NextResponse.json(result)
   } catch (error: any) {
-    console.error(`Error actualizando noticia con id ${context.params.id}:`, error)
-    return NextResponse.json({ error: error.message || "Error interno del servidor" }, { status: 500 })
+    console.error("PUT error:", error)
+    return NextResponse.json({ error: error.message || "Error interno" }, { status: 500 })
   }
 }
 
-export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  const id = Number.parseInt(params.id)
+  if (isNaN(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
+
+  const role = request.headers.get("x-user-role")
+  if (role !== "admin") return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+
   try {
-    const id = Number.parseInt(context.params.id)
-
-    if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
-    }
-
-    if (!(await isAdmin(request))) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
-    }
-
     await deleteNews(id)
-
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error(`Error eliminando noticia con id ${context.params.id}:`, error)
-    return NextResponse.json({ error: error.message || "Error interno del servidor" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Error interno" }, { status: 500 })
   }
 }

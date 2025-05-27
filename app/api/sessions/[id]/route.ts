@@ -1,8 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSessionById, updateSession, deleteSession } from "@/lib/services/session-service"
 import { isAdmin } from "@/lib/utils/server-utils"
-import { uploadFile } from "@/lib/storage"
-
 
 async function validateAdminAndId(request: NextRequest, idParam: string) {
   if (!(await isAdmin(request))) {
@@ -86,4 +84,3 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ error: error.message || "Error interno del servidor" }, { status: 500 })
   }
 }
-

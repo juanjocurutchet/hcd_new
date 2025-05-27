@@ -9,9 +9,16 @@ export async function POST(request: NextRequest) {
     const content = formData.get("content") as string
     const excerpt = formData.get("excerpt") as string | null
     const image = formData.get("image") as File | null
-    const authorId = Number.parseInt(formData.get("authorId") as string)
     const isPublished = formData.get("isPublished") === "true"
 
+    const userId = request.headers.get("x-user-id")
+    const role = request.headers.get("x-user-role")
+
+    if (!userId || role !== "admin") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+    }
+
+    const authorId = Number.parseInt(userId)
     if (!title || !content || isNaN(authorId)) {
       return NextResponse.json({ error: "Título, contenido y autor son requeridos" }, { status: 400 })
     }
