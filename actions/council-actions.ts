@@ -88,3 +88,41 @@ export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
     return []
   }
 }
+
+// actions/concejal-actions.ts
+
+export async function updateCouncilMember(id: number, formData: FormData, userId: string, role: string) {
+  const response = await fetch(`/api/concejales/${id}`, {
+    method: "PUT",
+    body: formData,
+    headers: {
+      "x-user-id": userId,
+      "x-user-role": role,
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || "Error al actualizar concejal")
+  }
+
+  return await response.json()
+}
+
+export async function createCouncilMember(formData: FormData, userId: string, role: string) {
+  const response = await fetch("/api/concejales", {
+    method: "POST",
+    body: formData,
+    headers: {
+      "x-user-id": userId,
+      "x-user-role": role,
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || "Error al crear concejal")
+  }
+
+  return await response.json()
+}

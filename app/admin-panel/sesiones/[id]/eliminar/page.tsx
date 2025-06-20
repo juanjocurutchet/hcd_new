@@ -10,26 +10,20 @@ interface PageProps {
 
 export default async function EliminarSesionPage({ params }: PageProps) {
   const id = Number.parseInt(params.id)
-
-  if (isNaN(id)) {
-    notFound()
-  }
+  if (isNaN(id)) notFound()
 
   const sesion = await getSessionById(id)
-
-  if (!sesion) {
-    notFound()
-  }
+  if (!sesion) notFound()
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Eliminar Sesión</h1>
-      </div>
-
-      <div className="bg-white rounded-md shadow p-6">
-        <EliminarSesionForm sesion={sesion} />
-      </div>
+    <div className="max-w-2xl mx-auto py-10">
+      <EliminarSesionForm
+        sesion={{
+          id: sesion.id,
+          type: sesion.type,
+          date: sesion.date
+        }}
+      />
     </div>
   )
 }

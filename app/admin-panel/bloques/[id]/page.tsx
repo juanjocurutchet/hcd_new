@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
-import { getAllCouncilMembers } from "@/lib/services/session-service"
-import BloqueForm from "../components/bloque-form"
 import { getPoliticalBlockById } from "@/lib/services/political-blocks-service"
+import BloqueForm from "../components/bloque-form"
+import { getAllCouncilMembers } from "@/lib/services/session-service"
 
 interface PageProps {
   params: {
@@ -11,19 +11,14 @@ interface PageProps {
 
 export default async function EditarBloquePage({ params }: PageProps) {
   const blockId = Number.parseInt(params.id)
-
-  if (isNaN(blockId)) {
-    notFound()
-  }
+  if (isNaN(blockId)) notFound()
 
   const [bloque, concejales] = await Promise.all([
     getPoliticalBlockById(blockId),
     getAllCouncilMembers(),
   ])
 
-  if (!bloque) {
-    notFound()
-  }
+  if (!bloque) notFound()
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
@@ -33,7 +28,7 @@ export default async function EditarBloquePage({ params }: PageProps) {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border p-6">
-        <BloqueForm bloque={bloque} concejales={concejales} />
+        <BloqueForm bloque={{ ...bloque, memberCount: bloque.memberCount ?? 0 }} concejales={concejales} />
       </div>
     </div>
   )

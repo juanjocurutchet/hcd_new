@@ -1,18 +1,16 @@
-import type { Metadata } from "next"
-import { ActividadForm } from "../components/actividad-form"
-
-export const metadata: Metadata = {
-  title: "Nueva Actividad | Panel de Administración",
-  description: "Crear una nueva actividad",
-}
+import { ActividadForm } from "../components/actividad-form";
 
 export default function NuevaActividadPage() {
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Nueva Actividad</h1>
+    <div className="max-w-4xl mx-auto py-8 px-4">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Nueva Actividad</h1>
+        <p className="text-gray-600">Complete el formulario para agregar una nueva actividad</p>
       </div>
-      <ActividadForm />
+
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <ActividadForm />
+      </div>
     </div>
   )
 }

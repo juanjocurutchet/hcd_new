@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import { getNewsById } from "@/lib/services/news-service"
-import { NoticiaForm } from "../components/noticia-form"
+import EliminarNoticiaForm from "@/app/admin-panel/noticias/components/eliminar-noticia-form"
 
 interface PageProps {
   params: {
@@ -8,9 +8,8 @@ interface PageProps {
   }
 }
 
-export default async function EditarNoticiaPage({ params }: { params: { id: string } }) {
-  const idParam = await Promise.resolve(params.id) // 👈 con esto engañás al analizador estático
-  const id = Number.parseInt(idParam)
+export default async function EliminarNoticiaPage({ params }: PageProps) {
+  const id = Number.parseInt(params.id)
 
   if (isNaN(id)) notFound()
 
@@ -18,11 +17,8 @@ export default async function EditarNoticiaPage({ params }: { params: { id: stri
   if (!noticia) notFound()
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Editar Noticia</h1>
-      <div className="bg-white rounded-md shadow p-6">
-        <NoticiaForm noticia={{ ...noticia, id: String(noticia.id), excerpt: noticia.excerpt ?? undefined }} />
-      </div>
+    <div className="max-w-2xl mx-auto py-10">
+      <EliminarNoticiaForm noticia={{ id: noticia.id, title: noticia.title }} />
     </div>
   )
 }

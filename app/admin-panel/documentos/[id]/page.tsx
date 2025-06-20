@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation"
-import { getCouncilMemberById } from "@/actions/council-actions"
-import EliminarConcejalForm from "../../concejales/components/eliminar-concejal-form"
-
+import { getDocumentById } from "@/lib/services/document-service"
+import { DocumentoForm } from "../components/documento-form"
 
 interface PageProps {
   params: {
@@ -9,27 +8,29 @@ interface PageProps {
   }
 }
 
-export default async function EliminarConcejalPage({ params }: PageProps) {
+export default async function EditarDocumentoPage({ params }: PageProps) {
   const id = Number.parseInt(params.id)
+  if (isNaN(id)) notFound()
 
-  if (isNaN(id)) {
-    notFound()
-  }
-
-  const concejal = await getCouncilMemberById(id)
-
-  if (!concejal) {
-    notFound()
-  }
+  const documento = await getDocumentById(id)
+  if (!documento) notFound()
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Eliminar Concejal</h1>
+    <div className="max-w-4xl mx-auto py-8 px-4">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Editar Documento</h1>
+        <p className="text-gray-600">Modifica la información del documento</p>
       </div>
 
-      <div className="bg-white rounded-md shadow p-6">
-        <EliminarConcejalForm concejal={concejal} />
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+      <DocumentoForm
+        documento={{
+          ...documento,
+          id: String(documento.id),
+          number: documento.number ?? undefined,
+          content: documento.content ?? undefined,
+        }}
+      />
       </div>
     </div>
   )

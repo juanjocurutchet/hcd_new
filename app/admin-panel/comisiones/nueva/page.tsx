@@ -1,18 +1,16 @@
-import type { Metadata } from "next"
-import { ComisionForm } from "../components/comision-form"
-
-export const metadata: Metadata = {
-  title: "Nueva Comisión | Panel de Administración",
-  description: "Crear una nueva comisión",
-}
+import { ComisionForm } from "../components/comision-form";
 
 export default function NuevaComisionPage() {
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Nueva Comisión</h1>
+    <div className="max-w-4xl mx-auto py-8 px-4">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Nueva Comisión</h1>
+        <p className="text-gray-600">Complete el formulario para agregar una nueva comisión</p>
       </div>
-      <ComisionForm />
+
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <ComisionForm />
+      </div>
     </div>
   )
 }
