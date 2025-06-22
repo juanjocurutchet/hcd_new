@@ -1,25 +1,30 @@
 import { getAllCouncilMembers, getAllPoliticalBlocks } from "@/lib/services/session-service"
-import { notFound } from "next/navigation"
 import BloqueForm from "../components/bloque-form"
+import { notFound } from "next/navigation"
 
-export default async function EditBloquePage({
-  params,
-}: {
-  params: { id: string }
-}) {
-  const id = Number(params.id)
-  if (isNaN(id)) return notFound()
+export default async function EditBloquePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const numericId = Number(id)
+  if (isNaN(numericId)) return notFound()
 
   const bloques = await getAllPoliticalBlocks()
   const concejales = await getAllCouncilMembers()
 
-  const bloque = bloques.find((b) => b.id === id)
-  if (!bloque) return notFound()
+  const bloqueBase = bloques.find((b) => b.id === numericId)
+  if (!bloqueBase) return notFound()
+
+  const bloqueConPresidente = {
+    id: bloqueBase.id,
+    name: bloqueBase.name,
+    color: bloqueBase.color,
+    president: bloqueBase.president,
+    presidentId: bloqueBase.president?.id ?? null,
+  }
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Editar Bloque</h1>
-      <BloqueForm bloque={bloque} concejales={concejales} />
+      <BloqueForm bloque={bloqueConPresidente} concejales={concejales} />
     </div>
   )
 }

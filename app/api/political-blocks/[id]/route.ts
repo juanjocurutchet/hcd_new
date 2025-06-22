@@ -1,15 +1,15 @@
-// app/api/political-blocks/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 
-export async function DELETE(_: NextRequest, context: { params: { id: string } }) {
-  const id = Number(context.params.id)
-  if (isNaN(id)) {
+export async function DELETE(_: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params
+  const numericId = Number(id)
+  if (isNaN(numericId)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 })
   }
 
   try {
-    await sql`DELETE FROM political_blocks WHERE id = ${id}`
+    await sql`DELETE FROM political_blocks WHERE id = ${numericId}`
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error al eliminar bloque:", error)
@@ -17,9 +17,10 @@ export async function DELETE(_: NextRequest, context: { params: { id: string } }
   }
 }
 
-export async function PUT(request: NextRequest, context: { params: { id: string } }) {
-  const id = Number(context.params.id)
-  if (isNaN(id)) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params
+  const numericId = Number(id)
+  if (isNaN(numericId)) {
     return NextResponse.json({ error: "ID inválido" }, { status: 400 })
   }
 
@@ -28,12 +29,11 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
     const name = formData.get("name") as string
     const color = formData.get("color") as string
     const presidentIdStr = formData.get("presidentId") as string
+    const presidentId = presidentIdStr === "-1" ? null : Number.parseInt(presidentIdStr)
 
     if (!name) {
       return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 })
     }
-
-    const presidentId = presidentIdStr === "-1" ? null : Number.parseInt(presidentIdStr)
 
     await sql`
       UPDATE political_blocks
@@ -41,7 +41,7 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
         name = ${name},
         color = ${color},
         president_id = ${presidentId}
-      WHERE id = ${id}
+      WHERE id = ${numericId}
     `
 
     return NextResponse.json({ success: true })

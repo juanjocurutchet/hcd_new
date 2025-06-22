@@ -1,13 +1,12 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import type { PoliticalBlock } from "@/actions/council-actions"
+import { PoliticalBlockWithPresident } from "@/actions/council-actions"
 
 interface EliminarBloqueFormProps {
-  bloque: PoliticalBlock
+  bloque: PoliticalBlockWithPresident
 }
 
 export default function EliminarBloqueForm({ bloque }: EliminarBloqueFormProps) {
