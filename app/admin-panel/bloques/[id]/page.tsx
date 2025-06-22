@@ -1,35 +1,25 @@
+import { getAllCouncilMembers, getAllPoliticalBlocks } from "@/lib/services/session-service"
 import { notFound } from "next/navigation"
-import { getPoliticalBlockById } from "@/lib/services/political-blocks-service"
 import BloqueForm from "../components/bloque-form"
-import { getAllCouncilMembers } from "@/lib/services/session-service"
 
-interface PageProps {
-  params: {
-    id: string
-  }
-}
+export default async function EditBloquePage({
+  params,
+}: {
+  params: { id: string }
+}) {
+  const id = Number(params.id)
+  if (isNaN(id)) return notFound()
 
-export default async function EditarBloquePage({ params }: PageProps) {
-  const blockId = Number.parseInt(params.id)
-  if (isNaN(blockId)) notFound()
+  const bloques = await getAllPoliticalBlocks()
+  const concejales = await getAllCouncilMembers()
 
-  const [bloque, concejales] = await Promise.all([
-    getPoliticalBlockById(blockId),
-    getAllCouncilMembers(),
-  ])
-
-  if (!bloque) notFound()
+  const bloque = bloques.find((b) => b.id === id)
+  if (!bloque) return notFound()
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Editar Bloque Político</h1>
-        <p className="text-gray-600">Modifica la información del bloque político</p>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <BloqueForm bloque={{ ...bloque, memberCount: bloque.memberCount ?? 0 }} concejales={concejales} />
-      </div>
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold">Editar Bloque</h1>
+      <BloqueForm bloque={bloque} concejales={concejales} />
     </div>
   )
 }

@@ -2,51 +2,15 @@ import { Button } from "@/components/ui/button"
 import { Download, Play } from "lucide-react"
 import Link from "next/link"
 import type { Metadata } from "next"
+import { getSessionAudios } from "@/actions/session-actions"
 
 export const metadata: Metadata = {
   title: "Audios | HCD Las Flores",
   description: "Audios de las sesiones del Honorable Concejo Deliberante de Las Flores",
 }
 
-export default function AudiosPage() {
-  // Datos de ejemplo para audios
-  const audios = [
-    {
-      id: 1,
-      fecha: "2025-05-16",
-      titulo: "Audio - Sesión Ordinaria",
-      duracion: "2:15:30",
-      archivo: "#",
-    },
-    {
-      id: 2,
-      fecha: "2025-05-02",
-      titulo: "Audio - Sesión Ordinaria",
-      duracion: "1:45:20",
-      archivo: "#",
-    },
-    {
-      id: 3,
-      fecha: "2025-04-18",
-      titulo: "Audio - Sesión Ordinaria",
-      duracion: "2:30:15",
-      archivo: "#",
-    },
-    {
-      id: 4,
-      fecha: "2025-04-04",
-      titulo: "Audio - Sesión Ordinaria",
-      duracion: "1:55:40",
-      archivo: "#",
-    },
-    {
-      id: 5,
-      fecha: "2025-03-21",
-      titulo: "Audio - Sesión Extraordinaria",
-      duracion: "3:10:05",
-      archivo: "#",
-    },
-  ]
+export default async function AudiosPage() {
+  const audios = await getSessionAudios()
 
   return (
     <div className="max-w-[1200px] mx-auto py-8">
@@ -81,21 +45,20 @@ export default function AudiosPage() {
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="text-gray-500">
-                      {new Date(audio.fecha).toLocaleDateString("es-AR", {
+                      {new Date(audio.date).toLocaleDateString("es-AR", {
                         day: "numeric",
                         month: "long",
                         year: "numeric",
                       })}
                     </p>
-                    <h3 className="font-medium">{audio.titulo}</h3>
-                    <p className="text-sm text-gray-500">Duración: {audio.duracion}</p>
+                    <h3 className="font-medium">Audio - Sesión {audio.type}</h3>
                   </div>
                   <div className="flex gap-3">
-                    <Link href={audio.archivo} className="inline-flex items-center text-[#0e4c7d] hover:underline">
+                    <Link href={audio.audioFileUrl!} target="_blank" className="inline-flex items-center text-[#0e4c7d] hover:underline">
                       <Play className="h-4 w-4 mr-1" />
                       Escuchar
                     </Link>
-                    <Link href={audio.archivo} className="inline-flex items-center text-[#0e4c7d] hover:underline">
+                    <Link href={audio.audioFileUrl!} target="_blank" className="inline-flex items-center text-[#0e4c7d] hover:underline">
                       <Download className="h-4 w-4 mr-1" />
                       Descargar
                     </Link>

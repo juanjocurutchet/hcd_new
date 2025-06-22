@@ -5,31 +5,39 @@ import { getToken } from "next-auth/jwt"
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
 
-  if (
-    ["/admin/login", "/admin/unauthorized", "/api/auth", "/_next", "/favicon.ico", "/public"]
-      .some(route => path.startsWith(route))
-  ) {
-    return NextResponse.next()
-  }
+  const isPublicRoute = [
+    "/",
+    "/admin-panel/login",
+    "/admin/unauthorized",
+    "/favicon.ico",
+  ].some(route => path.startsWith(route)) ||
+    path.startsWith("/_next") ||
+    path.startsWith("/api/auth")
 
-  const isProtectedRoute = path.startsWith("/admin-panel") || path.startsWith("/api/news")
+  const response = NextResponse.next()
+  response.headers.set("x-pathname", path) // <- línea clave para que el layout pueda leer el path
 
-  if (!isProtectedRoute) return NextResponse.next()
+  if (isPublicRoute) return response
 
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
 
-  if (!token || token.role !== "admin") {
-    const url = new URL("/admin/unauthorized", request.url)
-    return NextResponse.redirect(url)
+  const isProtectedRoute = path.startsWith("/admin-panel")
+
+  if (isProtectedRoute) {
+    if (!token || token.role !== "admin") {
+      return NextResponse.redirect(new URL("/admin/unauthorized", request.url))
+    }
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set("x-user-id", token.id as string)
+    requestHeaders.set("x-user-role", token.role)
+
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+      headers: response.headers,
+    })
   }
 
-  const headers = new Headers(request.headers)
-  headers.set("x-user-id", token.id as string)
-  headers.set("x-user-role", token.role)
-
-  return NextResponse.next({ request: { headers } })
-}
-
-export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"],
+  return response
 }

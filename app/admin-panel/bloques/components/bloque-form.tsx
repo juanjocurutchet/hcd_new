@@ -1,13 +1,16 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import type { PoliticalBlock, CouncilMember } from "@/actions/council-actions"
+import type { CouncilMember } from "@/actions/council-actions"
 
 interface BloqueFormProps {
-  bloque?: PoliticalBlock | null
+  bloque?: {
+    id: number
+    name: string
+    color: string | null
+    president: CouncilMember | null
+  } | null
   concejales: CouncilMember[]
 }
 
@@ -27,7 +30,6 @@ export default function BloqueForm({ bloque, concejales }: BloqueFormProps) {
 
     try {
       const url = bloque ? `/api/political-blocks/${bloque.id}` : "/api/political-blocks/create"
-
       const method = bloque ? "PUT" : "POST"
 
       const response = await fetch(url, {
@@ -77,7 +79,7 @@ export default function BloqueForm({ bloque, concejales }: BloqueFormProps) {
         <select
           id="presidentId"
           name="presidentId"
-          defaultValue={bloque?.president_id?.toString() || "-1"}
+          defaultValue={bloque?.president?.id?.toString() || "-1"}
           className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="-1">Sin presidente asignado</option>

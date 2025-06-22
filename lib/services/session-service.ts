@@ -5,6 +5,7 @@ import { desc } from "drizzle-orm"
 import { sessions } from "../db/schema"
 import { db } from "../db-singleton"
 import { uploadFile } from "../storage"
+import { PoliticalBlockWithPresident } from "@/actions/council-actions"
 
 export type CouncilMember = {
   id: number
@@ -107,55 +108,69 @@ export async function getPoliticalBlocks(): Promise<PoliticalBlock[]> {
   }
 }
 
-export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
+export async function getAllPoliticalBlocks(): Promise<PoliticalBlockWithPresident[]> {
   try {
     const blocks = await sql`
-      SELECT id, name, president_id as "presidentId", color
-      FROM political_blocks
-      ORDER BY name
+      SELECT
+        pb.id,
+        pb.name,
+        pb.color,
+        pb.president_id as "presidentId",
+        cm.id as "president_id",
+        cm.name as "president_name",
+        cm.image_url as "president_imageUrl",
+        cm.position as "president_position",
+        cm.block_id as "president_blockId",
+        cm.mandate as "president_mandate",
+        cm.bio as "president_bio",
+        cm.is_active as "president_isActive",
+        cm.created_at as "president_createdAt",
+        cm.updated_at as "president_updatedAt"
+      FROM political_blocks pb
+      LEFT JOIN council_members cm ON pb.president_id = cm.id
+      ORDER BY pb.name
     `
 
-    const blocksWithCounts = await Promise.all(
-      (blocks as PoliticalBlock[]).map(async (block) => {
+    const blocksWithPresidents = await Promise.all(
+      (blocks as any[]).map(async (block) => {
         const countResult = await sql`
           SELECT COUNT(*) as count
           FROM council_members
           WHERE block_id = ${block.id} AND is_active = true
         `
+
+        const president: CouncilMember | null = block.president_id
+          ? {
+              id: block.president_id,
+              name: block.president_name,
+              imageUrl: block.president_imageUrl,
+              position: block.president_position,
+              blockId: block.president_blockId,
+              mandate: block.president_mandate,
+              bio: block.president_bio,
+              isActive: block.president_isActive,
+              createdAt: block.president_createdAt,
+              updatedAt: block.president_updatedAt,
+            }
+          : null
+
         return {
-          ...block,
-          memberCount: Number(countResult[0]?.count) || 0,
+          id: block.id,
+          name: block.name,
+          color: block.color,
+          president,
+          memberCount: Number(countResult[0]?.count || 0),
         }
       })
     )
 
-    return blocksWithCounts
+    return blocksWithPresidents
   } catch (error) {
-    console.error("Error fetching all political blocks:", error)
+    console.error("Error fetching political blocks:", error)
     return []
   }
 }
 
-export async function getCouncilMembersByBlock(blockId: number): Promise<CouncilMember[]> {
-  try {
-    const result = await sql`
-      SELECT id, name, position, block_id as "blockId", mandate, image_url as "imageUrl", bio, is_active as "isActive"
-      FROM council_members
-      WHERE block_id = ${blockId} AND is_active = true
-      ORDER BY
-        CASE
-          WHEN position = 'Presidente' THEN 1
-          WHEN position LIKE 'Vicepresidente%' THEN 2
-          ELSE 3
-        END,
-        name
-    `
-    return result as CouncilMember[]
-  } catch (error) {
-    console.error(`Error fetching council members for block ${blockId}:`, error)
-    return []
-  }
-}
 
 export async function getCouncilMemberById(id: number): Promise<CouncilMember | null> {
   try {

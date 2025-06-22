@@ -1,6 +1,6 @@
 import { db } from "@/lib/db-singleton"
 import { councilMembers, politicalBlocks } from "@/lib/db/schema"
-import { eq, asc, sql, and } from "drizzle-orm"
+import { eq, asc, sql, and, inArray } from "drizzle-orm"
 
 export type CouncilMember = {
   id: number
@@ -28,34 +28,67 @@ export type PoliticalBlock = {
   memberCount: number
 }
 
-export async function getAllCouncilMembersWithBlock(): Promise<CouncilMemberWithBlock[]> {
-  try {
-    const result = await db
-      .select({
-        id: councilMembers.id,
-        name: councilMembers.name,
-        imageUrl: councilMembers.imageUrl,
-        createdAt: councilMembers.createdAt,
-        updatedAt: councilMembers.updatedAt,
-        position: councilMembers.position,
-        blockId: councilMembers.blockId,
-        mandate: councilMembers.mandate,
-        bio: councilMembers.bio,
-        isActive: councilMembers.isActive,
-        blockName: politicalBlocks.name,
-      })
-      .from(councilMembers)
-      .leftJoin(politicalBlocks, eq(councilMembers.blockId, politicalBlocks.id))
-      .orderBy(asc(councilMembers.name))
-
-    return result
-  } catch (error) {
-    console.error("Error fetching council members with block:", error)
-    return []
-  }
+export type PoliticalBlockWithPresident = {
+  id: number
+  name: string
+  color: string | null
+  memberCount: number
+  president: CouncilMember | null
 }
 
-export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
+
+export async function getActiveCouncilMembersByBlock() {
+  return await db
+    .select({
+      id: councilMembers.id,
+      name: councilMembers.name,
+      position: councilMembers.position,
+      imageUrl: councilMembers.imageUrl,
+      bio: councilMembers.bio,
+      blockId: councilMembers.blockId,
+      mandate: councilMembers.mandate,
+      isActive: councilMembers.isActive,
+      blockName: politicalBlocks.name,
+      blockColor: politicalBlocks.color,
+    })
+    .from(councilMembers)
+    .leftJoin(politicalBlocks, eq(councilMembers.blockId, politicalBlocks.id))
+    .where(eq(councilMembers.isActive, true))
+}
+
+export async function getAuthorities() {
+  return await db
+    .select({
+      id: councilMembers.id,
+      name: councilMembers.name,
+      position: councilMembers.position,
+      email: councilMembers.email,
+      blockName: politicalBlocks.name,
+    })
+    .from(councilMembers)
+    .leftJoin(politicalBlocks, eq(councilMembers.blockId, politicalBlocks.id))
+    .where(
+      and(
+        eq(councilMembers.isActive, true),
+        inArray(councilMembers.position, [
+          "Presidente",
+          "Vicepresidente 1°",
+          "Visepresidente 2°",
+          "Secretario Legislativo",
+        ])
+      )
+    )
+}
+
+export async function getAllPoliticalBlocksWithPresident(): Promise<(PoliticalBlock & {
+  president: {
+    id: number
+    name: string
+    imageUrl: string | null
+    position: string | null
+    blockName: string | null
+  } | null
+})[]> {
   try {
     const blocks = await db
       .select({
@@ -68,8 +101,27 @@ export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
       .from(politicalBlocks)
       .orderBy(asc(politicalBlocks.name))
 
-    const blocksWithCounts = await Promise.all(
-      blocks.map(async (block): Promise<PoliticalBlock> => {
+    const blocksWithDetails = await Promise.all(
+      blocks.map(async (block) => {
+        let president = null
+
+        if (block.presidentId !== null) {
+          const result = await db
+            .select({
+              id: councilMembers.id,
+              name: councilMembers.name,
+              imageUrl: councilMembers.imageUrl,
+              position: councilMembers.position,
+              blockName: politicalBlocks.name,
+            })
+            .from(councilMembers)
+            .leftJoin(politicalBlocks, eq(councilMembers.blockId, politicalBlocks.id))
+            .where(eq(councilMembers.id, block.presidentId))
+            .limit(1)
+
+          president = result[0] || null
+        }
+
         const countResult = await db
           .select({ count: sql<number>`count(*)` })
           .from(councilMembers)
@@ -78,13 +130,14 @@ export async function getAllPoliticalBlocks(): Promise<PoliticalBlock[]> {
         return {
           ...block,
           memberCount: Number(countResult[0].count || 0),
+          president,
         }
-      }),
+      })
     )
 
-    return blocksWithCounts
+    return blocksWithDetails
   } catch (error) {
-    console.error("Error fetching political blocks:", error)
+    console.error("Error al obtener bloques:", error)
     return []
   }
 }

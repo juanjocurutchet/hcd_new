@@ -2,46 +2,15 @@ import { Button } from "@/components/ui/button"
 import { Download } from "lucide-react"
 import Link from "next/link"
 import type { Metadata } from "next"
+import { getSessionAgendas } from "@/actions/session-actions"
 
 export const metadata: Metadata = {
   title: "Órdenes del día | HCD Las Flores",
   description: "Órdenes del día de las sesiones del Honorable Concejo Deliberante de Las Flores",
 }
 
-export default function OrdenesPage() {
-  // Datos de ejemplo para órdenes del día
-  const ordenes = [
-    {
-      id: 1,
-      fecha: "2025-05-16",
-      titulo: "Orden del día - Sesión Ordinaria",
-      archivo: "#",
-    },
-    {
-      id: 2,
-      fecha: "2025-05-02",
-      titulo: "Orden del día - Sesión Ordinaria",
-      archivo: "#",
-    },
-    {
-      id: 3,
-      fecha: "2025-04-18",
-      titulo: "Orden del día - Sesión Ordinaria",
-      archivo: "#",
-    },
-    {
-      id: 4,
-      fecha: "2025-04-04",
-      titulo: "Orden del día - Sesión Ordinaria",
-      archivo: "#",
-    },
-    {
-      id: 5,
-      fecha: "2025-03-21",
-      titulo: "Orden del día - Sesión Extraordinaria",
-      archivo: "#",
-    },
-  ]
+export default async function OrdenesPage() {
+  const ordenes = await getSessionAgendas()
 
   return (
     <div className="max-w-[1200px] mx-auto py-8">
@@ -76,16 +45,20 @@ export default function OrdenesPage() {
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="text-gray-500">
-                      {new Date(orden.fecha).toLocaleDateString("es-AR", {
+                      {new Date(orden.date).toLocaleDateString("es-AR", {
                         day: "numeric",
                         month: "long",
                         year: "numeric",
                       })}
                     </p>
-                    <h3 className="font-medium">{orden.titulo}</h3>
+                    <h3 className="font-medium">Orden del día - Sesión {orden.type.charAt(0).toUpperCase() + orden.type.slice(1)}</h3>
                   </div>
                   <div>
-                    <Link href={orden.archivo} className="inline-flex items-center text-[#0e4c7d] hover:underline">
+                    <Link
+                      href={orden.agendaFileUrl ?? "#"}
+                      className="inline-flex items-center text-[#0e4c7d] hover:underline"
+                      target="_blank"
+                    >
                       <Download className="h-4 w-4 mr-1" />
                       Descargar PDF
                     </Link>

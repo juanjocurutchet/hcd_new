@@ -1,10 +1,11 @@
+import { getLatestSessions } from "@/actions/session-actions"
 import { Button } from "@/components/ui/button"
-import { Download, Video, Youtube } from "lucide-react"
+import { Download, Video } from "lucide-react"
+import { SiYoutube } from "react-icons/si"
 import Link from "next/link"
-import { getLatestSessions } from "@/actions/document-actions"
 
 export default async function SesionesPage() {
-  const sesiones = await getLatestSessions(6)
+  const sesiones = await getLatestSessions()
 
   return (
     <main className="min-h-screen bg-white">
@@ -34,7 +35,7 @@ export default async function SesionesPage() {
               {sesiones.length === 0 ? (
                 <div className="py-8 text-center text-gray-500">No hay sesiones disponibles</div>
               ) : (
-                sesiones.map((sesion, index) => (
+                sesiones.map((sesion) => (
                   <div key={sesion.id} className="py-4 border-b last:border-0">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center">
                       <div>
@@ -50,23 +51,25 @@ export default async function SesionesPage() {
                         </h3>
                       </div>
                       <div className="flex flex-wrap gap-3 mt-2 md:mt-0">
-                        {sesion.minutes_file_url && (
+                        {sesion.minutesFileUrl && (
                           <Link
-                            href={sesion.minutes_file_url}
+                            href={sesion.minutesFileUrl}
                             className="flex items-center text-[#0e4c7d] hover:underline"
                           >
                             <Download className="h-4 w-4 mr-1" />
                             Descargar acta
                           </Link>
                         )}
-                        <Link
-                          href={`https://www.youtube.com/channel/UCRVvtXaJETjQvbqUVvOkZAQ`}
-                          target="_blank"
-                          className="flex items-center text-red-600 hover:underline"
-                        >
-                          <Youtube className="h-4 w-4 mr-1" />
-                          Ver en YouTube
-                        </Link>
+                        {sesion.videoUrl && (
+                          <Link
+                            href={sesion.videoUrl}
+                            target="_blank"
+                            className="flex items-center text-red-600 hover:underline"
+                          >
+                            <SiYoutube className="h-4 w-4 mr-1" />
+                            Ver en YouTube
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>

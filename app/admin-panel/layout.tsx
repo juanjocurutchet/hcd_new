@@ -14,10 +14,8 @@ export default async function AdminPanelLayout({
 }: {
   children: ReactNode
 }) {
-  // Verificar sesión en el servidor
   const session = await getServerSession(authOptions)
 
-  // Si no hay sesión, redirigir a login
   if (!session) {
     redirect("/admin/login")
   }

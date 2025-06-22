@@ -33,6 +33,7 @@ export const news = pgTable("news", {
 export const councilMembers = pgTable("council_members", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
   position: varchar("position", { length: 255 }),
   blockId: integer("block_id").references(() => politicalBlocks.id),
   mandate: varchar("mandate", { length: 100 }),
@@ -48,7 +49,7 @@ export const politicalBlocks = pgTable("political_blocks", {
   name: varchar("name", { length: 255 }).notNull(),
   presidentId: integer("president_id"),
   color: varchar("color", { length: 50 }),
-  description: text("description"), // ✅ NUEVO
+  description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
