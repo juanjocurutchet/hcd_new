@@ -2,18 +2,16 @@ import { notFound } from "next/navigation"
 import { ComisionForm } from "../components/comision-form"
 import { getCommissionById } from "@/lib/services/commission-service"
 
-
 interface PageProps {
-  params: {
-    id: string
-  }
+  params: Promise<{ id: string }> // ✅ Cambiar a Promise
 }
 
 export default async function EditarComisionPage({ params }: PageProps) {
-  const id = Number.parseInt(params.id)
-  if (isNaN(id)) notFound()
+  const { id } = await params // ✅ Await params
+  const numericId = Number.parseInt(id)
+  if (isNaN(numericId)) notFound()
 
-  const comision = await getCommissionById(id)
+  const comision = await getCommissionById(numericId)
   if (!comision) notFound()
 
   return (
@@ -24,14 +22,15 @@ export default async function EditarComisionPage({ params }: PageProps) {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border p-6">
-      <ComisionForm
-        comision={{
-          ...comision,
-          id: String(comision.id),
-          description: comision.description ?? undefined,
-          presidentId: comision.presidentId ?? undefined
-        }}
-      />
+        <ComisionForm
+          comision={{
+            ...comision,
+            id: String(comision.id),
+            description: comision.description ?? undefined,
+            presidentId: comision.presidentId ?? undefined,
+            secretaryId: comision.secretaryId ?? undefined
+          }}
+        />
       </div>
     </div>
   )

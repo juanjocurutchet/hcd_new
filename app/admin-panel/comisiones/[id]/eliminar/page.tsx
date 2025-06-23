@@ -2,18 +2,16 @@ import { getCommissionById } from "@/lib/services/commission-service"
 import { notFound } from "next/navigation"
 import EliminarComisionForm from "../../components/eliminar-comision-form"
 
-
 interface PageProps {
-  params: {
-    id: string
-  }
+  params: Promise<{ id: string }> // ✅ Cambiar a Promise
 }
 
 export default async function EliminarComisionPage({ params }: PageProps) {
-  const id = Number.parseInt(params.id)
-  if (isNaN(id)) notFound()
+  const { id } = await params // ✅ Await params
+  const numericId = Number.parseInt(id)
+  if (isNaN(numericId)) notFound()
 
-  const comision = await getCommissionById(id)
+  const comision = await getCommissionById(numericId)
   if (!comision) notFound()
 
   return (

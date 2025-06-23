@@ -59,6 +59,8 @@ export const committees = pgTable("committees", {
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   presidentId: integer("president_id").references(() => councilMembers.id),
+  secretaryId: integer("secretary_id").references(() => councilMembers.id), // ✅ Añadir
+  isActive: boolean("is_active").default(true).notNull(), // ✅ Añadir
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -168,6 +170,10 @@ export const politicalBlocksRelations = relations(politicalBlocks, ({ many }) =>
 export const committeesRelations = relations(committees, ({ one, many }) => ({
   president: one(councilMembers, {
     fields: [committees.presidentId],
+    references: [councilMembers.id],
+  }),
+  secretary: one(councilMembers, {
+    fields: [committees.secretaryId],
     references: [councilMembers.id],
   }),
   members: many(committeeMembers),

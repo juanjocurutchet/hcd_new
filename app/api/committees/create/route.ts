@@ -4,13 +4,13 @@ import { isAdmin } from "@/lib/utils/server-utils"
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar permisos
-    if (!isAdmin(request)) {
+    // ✅ Verificar permisos con await
+    if (!(await isAdmin(request))) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
 
     const body = await request.json()
-    const { name, description, presidentId, memberIds } = body
+    const { name, description, presidentId, secretaryId, memberIds, isActive } = body // ✅ Añadir secretaryId e isActive
 
     if (!name) {
       return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 })
@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
     // Crear comisión
     const result = await sql`
       INSERT INTO committees (
-        name, description, president_id
+        name, description, president_id, secretary_id, is_active
       ) VALUES (
-        ${name}, ${description}, ${presidentId}
+        ${name}, ${description}, ${presidentId || null}, ${secretaryId || null}, ${isActive ?? true}
       )
       RETURNING id
     `
