@@ -1,6 +1,6 @@
 import { getSessions } from "@/lib/services/session-service"
+import { formatDate } from "@/lib/utils/format" // ✅ Usar tu función existente
 import Link from "next/link"
-import { format } from "date-fns"
 
 export default async function SesionesPage() {
   const sesiones = await getSessions()
@@ -14,21 +14,51 @@ export default async function SesionesPage() {
         </Link>
       </div>
 
-      <ul className="divide-y divide-gray-200 border rounded-md">
-        {sesiones.map((sesion) => (
-          <li key={sesion.id} className="p-4">
+      <div className="bg-white border rounded shadow-sm">
+        <ul className="divide-y divide-gray-200">
+          {sesiones.map((sesion) => (
+            <li key={sesion.id} className="flex justify-between items-center px-4 py-4 hover:bg-gray-50">
+              <div className="flex-1">
+                <div className="font-medium text-lg">
+                  {formatDate(sesion.date)} — {sesion.type}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {sesion.isPublished ? "Publicada" : "No publicada"}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Link
+                  href={`/admin-panel/sesiones/${sesion.id}`}
+                  className="text-blue-600 hover:underline"
+                  prefetch={false}
+                >
+                  Editar
+                </Link>
+                <Link
+                  href={`/admin-panel/sesiones/${sesion.id}/eliminar`}
+                  className="text-red-600 hover:underline"
+                  prefetch={false}
+                >
+                  Eliminar
+                </Link>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {sesiones.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <p>No hay sesiones creadas aún.</p>
             <Link
-              href={`/admin-panel/sesiones/${sesion.id}`}
-              className="font-medium text-lg text-blue-700 hover:underline"
+              href="/admin-panel/sesiones/nueva"
+              className="text-blue-600 hover:underline mt-2 inline-block"
             >
-              {format(new Date(sesion.date), "dd/MM/yyyy")} — {sesion.type}
+              Crear la primera sesión
             </Link>
-            <p className="text-sm text-gray-500">
-              {sesion.isPublished ? "Publicada" : "No publicada"}
-            </p>
-          </li>
-        ))}
-      </ul>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

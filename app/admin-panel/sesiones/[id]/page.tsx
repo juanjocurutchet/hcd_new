@@ -3,17 +3,27 @@ import { getSessionById } from "@/lib/services/session-service"
 import { SesionForm } from "../components/sesion-form"
 
 interface PageProps {
-  params: {
-    id: string
-  }
+  params: Promise<{ id: string }>
 }
 
 export default async function EditarSesionPage({ params }: PageProps) {
-  const id = Number.parseInt(params.id)
-  if (isNaN(id)) notFound()
+  const { id } = await params
+  const numericId = Number.parseInt(id)
+  if (isNaN(numericId)) notFound()
 
-  const sesion = await getSessionById(id)
+  const sesion = await getSessionById(numericId)
   if (!sesion) notFound()
+
+  // ✅ Función para convertir fecha de forma segura
+  const formatDate = (date: string | Date) => {
+    if (date instanceof Date) {
+      return date.toISOString().split("T")[0]
+    }
+    if (typeof date === 'string') {
+      return new Date(date).toISOString().split("T")[0]
+    }
+    return new Date().toISOString().split("T")[0]
+  }
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
@@ -23,14 +33,14 @@ export default async function EditarSesionPage({ params }: PageProps) {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border p-6">
-      <SesionForm
-        sesion={{
-          ...sesion,
-          id: String(sesion.id),
-          date: sesion.date.toISOString().split("T")[0],
-          videoUrl: sesion.videoUrl ?? undefined,
-        }}
-      />
+        <SesionForm
+          sesion={{
+            ...sesion,
+            id: String(sesion.id),
+            date: formatDate(sesion.date), // ✅ Conversión segura
+            videoUrl: sesion.videoUrl ?? undefined,
+          }}
+        />
       </div>
     </div>
   )

@@ -3,16 +3,15 @@ import { getSessionById } from "@/lib/services/session-service"
 import EliminarSesionForm from "../../components/eliminar-sesion-form"
 
 interface PageProps {
-  params: {
-    id: string
-  }
+  params: Promise<{ id: string }>
 }
 
 export default async function EliminarSesionPage({ params }: PageProps) {
-  const id = Number.parseInt(params.id)
-  if (isNaN(id)) notFound()
+  const { id } = await params
+  const numericId = Number.parseInt(id)
+  if (isNaN(numericId)) notFound()
 
-  const sesion = await getSessionById(id)
+  const sesion = await getSessionById(numericId)
   if (!sesion) notFound()
 
   return (
@@ -21,7 +20,7 @@ export default async function EliminarSesionPage({ params }: PageProps) {
         sesion={{
           id: sesion.id,
           type: sesion.type,
-          date: sesion.date
+          date: sesion.date 
         }}
       />
     </div>

@@ -1,11 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createSession } from "@/lib/services/session-service"
+
 import { isAdmin } from "@/lib/utils/server-utils"
+import { createSession } from "@/lib/services/session-service"
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar permisos
-    if (!isAdmin(request)) {
+    // ✅ Verificar permisos con await
+    if (!(await isAdmin(request))) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
 
@@ -28,15 +29,16 @@ export async function POST(request: NextRequest) {
     const result = await createSession({
       date,
       type,
-      agendaFile,
-      minutesFile,
-      audioFile,
+      agendaFile: (agendaFile && agendaFile.size > 0) ? agendaFile : null,
+      minutesFile: (minutesFile && minutesFile.size > 0) ? minutesFile : null,
+      audioFile: (audioFile && audioFile.size > 0) ? audioFile : null,
       videoUrl: videoUrl || undefined,
       isPublished,
     })
 
     return NextResponse.json(result)
   } catch (error: any) {
+    console.error("Error al crear sesión:", error)
     return NextResponse.json({ error: error.message || "Error al crear la sesión" }, { status: 500 })
   }
 }

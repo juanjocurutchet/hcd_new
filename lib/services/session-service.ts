@@ -196,14 +196,47 @@ export async function getCouncilMemberById(id: number): Promise<CouncilMember | 
   }
 }
 
-export async function getSessions(): Promise<Session[]> {
+export async function getSessions(options: {
+  year?: number
+  type?: string
+  limit?: number
+  offset?: number
+  onlyPublished?: boolean
+} = {}): Promise<Session[]> {
   try {
+    // Para simplificar, usar Drizzle ORM como en el código existente
     const result = await db
       .select()
       .from(sessions)
       .orderBy(desc(sessions.date))
 
-    return result as Session[]
+    // Filtrar en memoria por ahora (menos eficiente pero funcional)
+    let filteredResult = result
+
+    if (options.onlyPublished !== false) {
+      filteredResult = filteredResult.filter(s => s.isPublished)
+    }
+
+    if (options.year) {
+      filteredResult = filteredResult.filter(s =>
+        new Date(s.date).getFullYear() === options.year
+      )
+    }
+
+    if (options.type) {
+      filteredResult = filteredResult.filter(s => s.type === options.type)
+    }
+
+    // Aplicar paginación
+    if (options.offset) {
+      filteredResult = filteredResult.slice(options.offset)
+    }
+
+    if (options.limit) {
+      filteredResult = filteredResult.slice(0, options.limit)
+    }
+
+    return filteredResult as Session[]
   } catch (error) {
     console.error("Error fetching sessions:", error)
     return []
@@ -291,5 +324,69 @@ export async function deleteSession(id: number) {
   } catch (error) {
     console.error("Error deleting session:", error)
     throw error
+  }
+}
+
+export async function createSession(session: {
+  date: Date
+  type: string
+  agendaFile?: File | null
+  minutesFile?: File | null
+  audioFile?: File | null
+  videoUrl?: string
+  isPublished: boolean
+}) {
+  try {
+    let agendaFileUrl = null
+    let minutesFileUrl = null
+    let audioFileUrl = null
+
+    // Subir archivos si existen
+    if (session.agendaFile && session.agendaFile.size > 0) {
+      agendaFileUrl = await uploadFile(session.agendaFile, "sesiones")
+    }
+
+    if (session.minutesFile && session.minutesFile.size > 0) {
+      minutesFileUrl = await uploadFile(session.minutesFile, "sesiones")
+    }
+
+    if (session.audioFile && session.audioFile.size > 0) {
+      audioFileUrl = await uploadFile(session.audioFile, "sesiones")
+    }
+
+    const result = await sql`
+      INSERT INTO sessions (
+        date, type, agenda_file_url, minutes_file_url, audio_file_url, video_url, is_published
+      ) VALUES (
+        ${session.date}, ${session.type}, ${agendaFileUrl}, ${minutesFileUrl}, ${audioFileUrl}, ${session.videoUrl}, ${session.isPublished}
+      )
+      RETURNING *
+    `
+
+    return (result as Session[])[0]
+  } catch (error) {
+    console.error("Error creating session:", error)
+    throw error
+  }
+}
+
+// También añadir esta función que se usa en el endpoint público
+export async function getSessionsCount(options: {
+  year?: number
+  type?: string
+  onlyPublished: boolean
+}): Promise<number> {
+  try {
+    // Obtener todas y contar en memoria (simple pero funcional)
+    const allSessions = await getSessions({
+      onlyPublished: options.onlyPublished,
+      year: options.year,
+      type: options.type
+    })
+
+    return allSessions.length
+  } catch (error) {
+    console.error("Error getting sessions count:", error)
+    return 0
   }
 }

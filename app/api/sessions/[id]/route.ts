@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getSessionById, updateSession, deleteSession } from "@/lib/services/session-service"
+import { updateSession, deleteSession, getSessionById } from "@/lib/services/session-service"
 import { isAdmin } from "@/lib/utils/server-utils"
 
 async function validateAdminAndId(request: NextRequest, idParam: string) {
@@ -15,31 +15,18 @@ async function validateAdminAndId(request: NextRequest, idParam: string) {
   return { id }
 }
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: { params: { id: string } }) {
   try {
-    const id = Number.parseInt(params.id)
+    const params = await context.params
+    const idParam = params.id
+    const { id: numericId, error } = await validateAdminAndId(request, idParam)
+    if (error) return error
 
-    if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
-    }
-
-    const session = await getSessionById(id)
-
-    if (!session) {
+    // Verificar que la sesión existe
+    const existingSession = await getSessionById(numericId)
+    if (!existingSession) {
       return NextResponse.json({ error: "Sesión no encontrada" }, { status: 404 })
     }
-
-    return NextResponse.json(session)
-  } catch (error) {
-    console.error(`Error obteniendo sesión con id ${params.id}:`, error)
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
-  }
-}
-
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const { id, error } = await validateAdminAndId(request, params.id)
-    if (error) return error
 
     const formData = await request.formData()
 
@@ -51,36 +38,48 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const videoUrl = formData.get("videoUrl") as string | null
     const isPublished = formData.get("isPublished") === "true"
 
+    if (!dateStr || !type) {
+      return NextResponse.json({ error: "Fecha y tipo son requeridos" }, { status: 400 })
+    }
+
     const date = new Date(dateStr)
 
     const result = await updateSession({
-      id,
+      id: numericId,
       date,
       type,
-      agendaFile,
-      minutesFile,
-      audioFile,
+      agendaFile: (agendaFile && agendaFile.size > 0) ? agendaFile : null,
+      minutesFile: (minutesFile && minutesFile.size > 0) ? minutesFile : null,
+      audioFile: (audioFile && audioFile.size > 0) ? audioFile : null,
       videoUrl: videoUrl || undefined,
       isPublished,
     })
 
     return NextResponse.json(result)
   } catch (error: any) {
-    console.error(`Error actualizando sesión con id ${params.id}:`, error)
+    console.error("Error al actualizar sesión:", error)
     return NextResponse.json({ error: error.message || "Error interno del servidor" }, { status: 500 })
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
   try {
-    const { id, error } = await validateAdminAndId(request, params.id)
+    const params = await context.params
+    const idParam = params.id
+    const { id: numericId, error } = await validateAdminAndId(request, idParam)
     if (error) return error
 
-    await deleteSession(id)
+    // Verificar que la sesión existe
+    const existingSession = await getSessionById(numericId)
+    if (!existingSession) {
+      return NextResponse.json({ error: "Sesión no encontrada" }, { status: 404 })
+    }
 
-    return NextResponse.json({ success: true })
+    await deleteSession(numericId)
+
+    return NextResponse.json({ message: "Sesión eliminada correctamente" })
   } catch (error: any) {
-    console.error(`Error eliminando sesión con id ${params.id}:`, error)
+    console.error("Error al eliminar sesión:", error)
     return NextResponse.json({ error: error.message || "Error interno del servidor" }, { status: 500 })
   }
 }

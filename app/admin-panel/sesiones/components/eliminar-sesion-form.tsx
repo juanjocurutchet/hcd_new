@@ -3,7 +3,10 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { formatDate } from "@/lib/utils/format"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
+import { formatDate } from "@/lib/utils/format" // ✅ Usar tu función existente
+import { useApiRequest } from "@/hooks/useApiRequest"
 
 interface EliminarSesionFormProps {
   sesion: {
@@ -15,32 +18,48 @@ interface EliminarSesionFormProps {
 
 export default function EliminarSesionForm({ sesion }: EliminarSesionFormProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const router = useRouter()
+  const { apiRequest, isAuthenticated } = useApiRequest() // ✅ Usar hook
 
   const handleDelete = async () => {
+    // ✅ Verificar autenticación
+    if (!isAuthenticated) {
+      setError("No hay sesión activa")
+      return
+    }
+
     if (!confirm("¿Estás seguro de que quieres eliminar esta sesión? Esta acción no se puede deshacer.")) {
       return
     }
 
     setIsLoading(true)
+    setError("")
 
     try {
-      const response = await fetch(`/api/sessions/${sesion.id}`, {
-        method: "DELETE",
+      // ✅ Usar hook en lugar de fetch manual
+      await apiRequest(`/api/sessions/${sesion.id}`, {
+        method: "DELETE"
       })
-
-      if (!response.ok) {
-        throw new Error("Error al eliminar la sesión")
-      }
 
       router.push("/admin-panel/sesiones")
       router.refresh()
-    } catch (error) {
-      console.error("Error:", error)
-      alert("Error al eliminar la sesión")
+    } catch (err: any) {
+      console.error("Error:", err)
+      setError(err.message || "Error al eliminar la sesión")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // ✅ Mostrar mensaje si no está autenticado
+  if (!isAuthenticated) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>No autorizado. Por favor, inicia sesión.</AlertDescription>
+      </Alert>
+    )
   }
 
   return (
@@ -60,6 +79,13 @@ export default function EliminarSesionForm({ sesion }: EliminarSesionFormProps) 
           Esta acción no se puede deshacer. Todos los archivos asociados también serán eliminados.
         </p>
       </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <div className="flex space-x-4">
         <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>

@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useApiRequest } from "@/hooks/useApiRequest" // ✅ Importar hook
 
 interface Sesion {
   id?: string;
@@ -23,15 +24,18 @@ export function SesionForm({ sesion = null }: { sesion?: Sesion | null }) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
+  const { apiRequest, isAuthenticated } = useApiRequest() // ✅ Usar hook
+
   const [formData, setFormData] = useState({
     date: sesion?.date ? new Date(sesion.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
     type: sesion?.type || "ordinaria",
     videoUrl: sesion?.videoUrl || "",
     isPublished: sesion?.isPublished || false,
   })
-  const [agendaFile, setAgendaFile] = useState(null)
-  const [minutesFile, setMinutesFile] = useState(null)
-  const [audioFile, setAudioFile] = useState(null)
+
+  const [agendaFile, setAgendaFile] = useState<File | null>(null)
+  const [minutesFile, setMinutesFile] = useState<File | null>(null)
+  const [audioFile, setAudioFile] = useState<File | null>(null)
 
   const handleChange = (e: { target: { name: any; value: any; type: any; checked: any } }) => {
     const { name, value, type, checked } = e.target
@@ -48,7 +52,7 @@ export function SesionForm({ sesion = null }: { sesion?: Sesion | null }) {
     })
   }
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>, setFile: { (value: SetStateAction<null>): void; (value: SetStateAction<null>): void; (value: SetStateAction<null>): void; (arg0: any): void }) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>, setFile: (value: File | null) => void) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0])
     }
@@ -56,37 +60,51 @@ export function SesionForm({ sesion = null }: { sesion?: Sesion | null }) {
 
   const handleSubmit = async (e: { preventDefault: () => void }) => {
     e.preventDefault()
+
+    // ✅ Verificar autenticación
+    if (!isAuthenticated) {
+      setError("No hay sesión activa")
+      return
+    }
+
     setIsSubmitting(true)
     setError("")
 
     try {
+      // ✅ Validaciones básicas
+      if (!formData.date) {
+        throw new Error("La fecha es requerida")
+      }
+
+      if (!formData.type) {
+        throw new Error("El tipo de sesión es requerido")
+      }
+
       const data = new FormData()
       data.append("date", formData.date)
       data.append("type", formData.type)
       data.append("videoUrl", formData.videoUrl)
       data.append("isPublished", formData.isPublished.toString())
-      if (agendaFile) {
+
+      if (agendaFile && agendaFile.size > 0) {
         data.append("agendaFile", agendaFile)
       }
-      if (minutesFile) {
+      if (minutesFile && minutesFile.size > 0) {
         data.append("minutesFile", minutesFile)
       }
-      if (audioFile) {
+      if (audioFile && audioFile.size > 0) {
         data.append("audioFile", audioFile)
       }
 
       const url = sesion ? `/api/sessions/${sesion.id}` : "/api/sessions/create"
       const method = sesion ? "PUT" : "POST"
 
-      const response = await fetch(url, {
+      // ✅ Usar hook en lugar de fetch manual
+      await apiRequest(url, {
         method,
         body: data,
+        headers: {} // Vacío para FormData
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Error al guardar la sesión")
-      }
 
       router.push("/admin-panel/sesiones")
       router.refresh()
@@ -94,11 +112,21 @@ export function SesionForm({ sesion = null }: { sesion?: Sesion | null }) {
       if (err instanceof Error) {
         setError(err.message)
       } else {
-        setError("An unknown error occurred")
+        setError("Error desconocido")
       }
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // ✅ Mostrar mensaje si no está autenticado
+  if (!isAuthenticated) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>No autorizado. Por favor, inicia sesión.</AlertDescription>
+      </Alert>
+    )
   }
 
   return (
@@ -114,12 +142,19 @@ export function SesionForm({ sesion = null }: { sesion?: Sesion | null }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date">Fecha</Label>
-              <Input id="date" name="date" type="date" value={formData.date} onChange={handleChange} required />
+              <Label htmlFor="date">Fecha *</Label>
+              <Input
+                id="date"
+                name="date"
+                type="date"
+                value={formData.date}
+                onChange={handleChange}
+                required
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="type">Tipo</Label>
+              <Label htmlFor="type">Tipo *</Label>
               <Select value={formData.type} onValueChange={(value: any) => handleSelectChange("type", value)}>
                 <SelectTrigger id="type">
                   <SelectValue placeholder="Seleccionar tipo" />
@@ -143,6 +178,9 @@ export function SesionForm({ sesion = null }: { sesion?: Sesion | null }) {
               accept=".pdf,.doc,.docx"
               onChange={(e) => handleFileChange(e, setAgendaFile)}
             />
+            {agendaFile && (
+              <p className="text-sm text-green-600">Archivo seleccionado: {agendaFile.name}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -154,6 +192,9 @@ export function SesionForm({ sesion = null }: { sesion?: Sesion | null }) {
               accept=".pdf,.doc,.docx"
               onChange={(e) => handleFileChange(e, setMinutesFile)}
             />
+            {minutesFile && (
+              <p className="text-sm text-green-600">Archivo seleccionado: {minutesFile.name}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -162,9 +203,12 @@ export function SesionForm({ sesion = null }: { sesion?: Sesion | null }) {
               id="audioFile"
               name="audioFile"
               type="file"
-              accept=".mp3,.wav,.ogg"
+              accept=".mp3,.wav,.ogg,.m4a"
               onChange={(e) => handleFileChange(e, setAudioFile)}
             />
+            {audioFile && (
+              <p className="text-sm text-green-600">Archivo seleccionado: {audioFile.name}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -183,7 +227,7 @@ export function SesionForm({ sesion = null }: { sesion?: Sesion | null }) {
               id="isPublished"
               name="isPublished"
               checked={formData.isPublished}
-              onCheckedChange={(checked: any) => setFormData({ ...formData, isPublished: checked })}
+              onCheckedChange={(checked: any) => setFormData({ ...formData, isPublished: !!checked })}
             />
             <Label htmlFor="isPublished">Publicar inmediatamente</Label>
           </div>
