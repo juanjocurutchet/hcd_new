@@ -37,7 +37,9 @@ export default async function EditarSesionPage({ params }: PageProps) {
           sesion={{
             ...sesion,
             id: String(sesion.id),
-            date: formatDate(sesion.date), // ✅ Conversión segura
+            date: sesion.date instanceof Date
+            ? sesion.date.toISOString().split("T")[0]
+            : new Date(sesion.date).toISOString().split("T")[0],
             videoUrl: sesion.videoUrl ?? undefined,
           }}
         />

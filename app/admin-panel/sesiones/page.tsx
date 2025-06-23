@@ -1,9 +1,10 @@
 import { getSessions } from "@/lib/services/session-service"
-import { formatDate } from "@/lib/utils/format" // ✅ Usar tu función existente
+import { formatDate } from "@/lib/utils/format"
 import Link from "next/link"
 
 export default async function SesionesPage() {
-  const sesiones = await getSessions()
+  // ✅ Mostrar TODAS las sesiones en el admin (publicadas y no publicadas)
+  const sesiones = await getSessions({ onlyPublished: false })
 
   return (
     <div className="space-y-6">
@@ -23,7 +24,7 @@ export default async function SesionesPage() {
                   {formatDate(sesion.date)} — {sesion.type}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {sesion.isPublished ? "Publicada" : "No publicada"}
+                  {sesion.isPublished ? "Publicada" : "No publicada"} {/* ✅ Mostrar estado */}
                 </div>
               </div>
 

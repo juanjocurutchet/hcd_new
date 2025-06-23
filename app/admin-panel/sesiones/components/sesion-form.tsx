@@ -81,7 +81,12 @@ export function SesionForm({ sesion = null }: { sesion?: Sesion | null }) {
       }
 
       const data = new FormData()
-      data.append("date", formData.date)
+
+      // ✅ Formatear fecha para evitar problemas de timezone
+      const [year, month, day] = formData.date.split('-')
+      const formattedDate = `${year}-${month}-${day}`
+
+      data.append("date", formattedDate)
       data.append("type", formData.type)
       data.append("videoUrl", formData.videoUrl)
       data.append("isPublished", formData.isPublished.toString())

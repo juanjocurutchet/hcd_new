@@ -5,24 +5,25 @@ export function useApiRequest() {
   const { data: session, status } = useSession()
 
   const apiRequest = async (url: string, options: RequestInit = {}) => {
-    // Verificar que hay sesión
     if (status !== "authenticated" || !session) {
       throw new Error("No hay sesión activa")
     }
 
-    // Configurar headers por defecto (solo si no es FormData)
+    console.log("🔍 API Request:", { url, method: options.method }) // Debug
+
     const isFormData = options.body instanceof FormData
     const defaultHeaders = {
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...options.headers
     }
 
-    // Hacer petición con NextAuth
     const response = await fetch(url, {
       ...options,
-      credentials: 'include', // ✅ NextAuth usa cookies
+      credentials: 'include',
       headers: defaultHeaders
     })
+
+    console.log("🔍 API Response:", { status: response.status, url }) // Debug
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))

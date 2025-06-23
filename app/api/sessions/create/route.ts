@@ -1,11 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-import { isAdmin } from "@/lib/utils/server-utils"
 import { createSession } from "@/lib/services/session-service"
+import { isAdmin } from "@/lib/utils/server-utils"
 
 export async function POST(request: NextRequest) {
   try {
-    // ✅ Verificar permisos con await
     if (!(await isAdmin(request))) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
@@ -24,7 +22,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Fecha y tipo son requeridos" }, { status: 400 })
     }
 
-    const date = new Date(dateStr)
+    // ✅ Crear fecha sin timezone para evitar conversiones
+    const [year, month, day] = dateStr.split('-').map(Number)
+    const date = new Date(year, month - 1, day) // mes es 0-indexado
 
     const result = await createSession({
       date,

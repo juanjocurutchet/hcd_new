@@ -292,6 +292,7 @@ export async function updateSession(session: {
       audioFileUrl = await uploadFile(session.audioFile, "sesiones")
     }
 
+    // ✅ DEBE ser UPDATE, NO DELETE
     const updated = await sql`
       UPDATE sessions
       SET
