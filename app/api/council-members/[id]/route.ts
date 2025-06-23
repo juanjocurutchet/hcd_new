@@ -16,9 +16,10 @@ async function validateAdminAndId(request: NextRequest, idParam: string) {
   return { id }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: { params: { id: string } }) {
   try {
-    const idParam = params.id
+    const params = await context.params;
+    const idParam = params.id;
     const { id: numericId, error } = await validateAdminAndId(request, idParam)
     if (error) return error
 
@@ -56,30 +57,28 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return result.length
       ? NextResponse.json(result[0])
       : NextResponse.json({ error: "Concejal no encontrado" }, { status: 404 })
+
   } catch (error) {
     console.error("Error en PUT:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
-// Eliminar un concejal
-export async function DELETE(
-  request: NextRequest,
-  context: { params: { id: string } } // Tipo explícito para `params`
-) {
+
+export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
   try {
-    const idParam = context.params.id // Acceso correcto a `params`
+    const params = await context.params;
+    const idParam = params.id;
     const { id: numericId, error } = await validateAdminAndId(request, idParam)
     if (error) return error
 
     const result = await sql`
-      DELETE FROM council_members WHERE id = ${numericId} RETURNING *
+      DELETE FROM council_members WHERE id = ${numericId}
+      RETURNING *
     `
 
-    if (result.length === 0) {
-      return NextResponse.json({ error: "Concejal no encontrado" }, { status: 404 })
-    }
-
-    return NextResponse.json({ message: "Concejal eliminado correctamente" })
+    return result.length
+      ? NextResponse.json({ message: "Concejal eliminado correctamente" })
+      : NextResponse.json({ error: "Concejal no encontrado" }, { status: 404 })
   } catch (error) {
     console.error("Error al eliminar:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
