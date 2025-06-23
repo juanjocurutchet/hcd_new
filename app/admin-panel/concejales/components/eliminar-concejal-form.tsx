@@ -1,7 +1,9 @@
+// EliminarConcejalForm
 "use client"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 
 interface EliminarConcejalFormProps {
@@ -15,13 +17,25 @@ export default function EliminarConcejalForm({ concejal }: EliminarConcejalFormP
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+  const { data: session, status } = useSession()
 
   const handleDelete = async () => {
     setIsLoading(true)
     setError("")
+
     try {
+      // ✅ Verificar sesión de NextAuth
+      if (status !== "authenticated" || !session) {
+        setError("No hay sesión activa. Por favor, inicia sesión nuevamente.")
+        return
+      }
+
       const response = await fetch(`/api/council-members/${concejal.id}`, {
         method: "DELETE",
+        credentials: 'include', // ✅ NextAuth usa cookies HTTP-only
+        headers: {
+          'Content-Type': 'application/json'
+        }
       })
 
       if (!response.ok) {
@@ -37,6 +51,15 @@ export default function EliminarConcejalForm({ concejal }: EliminarConcejalFormP
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Mostrar mensaje si no hay sesión
+  if (status === "loading") {
+    return <div>Cargando...</div>
+  }
+
+  if (status !== "authenticated") {
+    return <div>No autorizado</div>
   }
 
   return (

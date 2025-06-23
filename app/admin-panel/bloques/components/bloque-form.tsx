@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import type { CouncilMember } from "@/actions/council-actions"
+import { useApiRequest } from "@/hooks/useApiRequest" // ✅ Importar hook
 
 interface BloqueFormProps {
   bloque?: {
@@ -19,9 +20,17 @@ export default function BloqueForm({ bloque, concejales }: BloqueFormProps) {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const router = useRouter()
+  const { apiRequest, isAuthenticated } = useApiRequest() // ✅ Usar hook
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+
+    // ✅ Verificar autenticación
+    if (!isAuthenticated) {
+      setError("No hay sesión activa")
+      return
+    }
+
     setIsLoading(true)
     setError("")
     setSuccess("")
@@ -32,15 +41,13 @@ export default function BloqueForm({ bloque, concejales }: BloqueFormProps) {
       const url = bloque ? `/api/political-blocks/${bloque.id}` : "/api/political-blocks/create"
       const method = bloque ? "PUT" : "POST"
 
-      const response = await fetch(url, {
+      // ✅ Usar hook en lugar de fetch manual
+      await apiRequest(url, {
         method,
         body: formData,
+        // ✅ No especificar Content-Type para FormData (se maneja automáticamente)
+        headers: {} // Vacío para que FormData maneje el boundary
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Error al guardar el bloque")
-      }
 
       setSuccess(bloque ? "Bloque actualizado correctamente" : "Bloque creado correctamente")
 
@@ -48,12 +55,21 @@ export default function BloqueForm({ bloque, concejales }: BloqueFormProps) {
         router.push("/admin-panel/bloques")
       }
       router.refresh()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error:", error)
-      setError(error instanceof Error ? error.message : "Error desconocido")
+      setError(error.message || "Error desconocido")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // ✅ Mostrar mensaje si no está autenticado
+  if (!isAuthenticated) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <p className="text-sm text-red-600">No autorizado. Por favor, inicia sesión.</p>
+      </div>
+    )
   }
 
   return (

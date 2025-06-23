@@ -66,13 +66,34 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
 
 export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
   try {
-    const params = await context.params;
-    const idParam = params.id;
+    const params = await context.params
+    const idParam = params.id
     const { id: numericId, error } = await validateAdminAndId(request, idParam)
     if (error) return error
 
+    // Desvincular como presidente en committees
+    await sql`
+      UPDATE committees
+      SET president_id = NULL
+      WHERE president_id = ${numericId}
+    `
+
+    // Eliminar participación en committee_members
+    await sql`
+      DELETE FROM committee_members
+      WHERE council_member_id = ${numericId}
+    `
+
+    // Eliminar participación en activity_participants
+    await sql`
+      DELETE FROM activity_participants
+      WHERE council_member_id = ${numericId}
+    `
+
+    // Finalmente, eliminar el concejal
     const result = await sql`
-      DELETE FROM council_members WHERE id = ${numericId}
+      DELETE FROM council_members
+      WHERE id = ${numericId}
       RETURNING *
     `
 

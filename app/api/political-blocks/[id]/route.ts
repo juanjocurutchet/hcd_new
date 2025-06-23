@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
+import { isAdmin } from "@/lib/utils/server-utils" // ✅ Importar
 
-export async function DELETE(_: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id } = await context.params
-  const numericId = Number(id)
-  if (isNaN(numericId)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 })
+// ✅ Función de validación compartida
+async function validateAdminAndId(request: NextRequest, idParam: string) {
+  if (!(await isAdmin(request))) {
+    return { error: NextResponse.json({ error: "No autorizado" }, { status: 403 }) }
   }
 
+  const id = Number.parseInt(idParam)
+  if (isNaN(id)) {
+    return { error: NextResponse.json({ error: "ID inválido" }, { status: 400 }) }
+  }
+
+  return { id }
+}
+
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params
+    const { id: numericId, error } = await validateAdminAndId(request, id)
+    if (error) return error
+
     await sql`DELETE FROM political_blocks WHERE id = ${numericId}`
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -18,13 +31,11 @@ export async function DELETE(_: NextRequest, context: { params: Promise<{ id: st
 }
 
 export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id } = await context.params
-  const numericId = Number(id)
-  if (isNaN(numericId)) {
-    return NextResponse.json({ error: "ID inválido" }, { status: 400 })
-  }
-
   try {
+    const { id } = await context.params
+    const { id: numericId, error } = await validateAdminAndId(request, id)
+    if (error) return error
+
     const formData = await request.formData()
     const name = formData.get("name") as string
     const color = formData.get("color") as string

@@ -4,6 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { PoliticalBlockWithPresident } from "@/actions/council-actions"
+import { useApiRequest } from "@/hooks/useApiRequest" // ✅ Importar hook
 
 interface EliminarBloqueFormProps {
   bloque: PoliticalBlockWithPresident
@@ -13,30 +14,43 @@ export default function EliminarBloqueForm({ bloque }: EliminarBloqueFormProps) 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+  const { apiRequest, isAuthenticated } = useApiRequest() // ✅ Usar hook
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // ✅ Verificar autenticación
+    if (!isAuthenticated) {
+      setError("No hay sesión activa")
+      return
+    }
+
     setIsLoading(true)
     setError("")
 
     try {
-      const response = await fetch(`/api/political-blocks/${bloque.id}`, {
+      // ✅ Usar hook en lugar de fetch manual
+      await apiRequest(`/api/political-blocks/${bloque.id}`, {
         method: "DELETE",
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Error al eliminar el bloque")
-      }
-
       router.push("/admin-panel/bloques")
       router.refresh()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error:", error)
-      setError(error instanceof Error ? error.message : "Error desconocido")
+      setError(error.message || "Error desconocido")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // ✅ Mostrar mensaje si no está autenticado
+  if (!isAuthenticated) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <p className="text-sm text-red-600">No autorizado. Por favor, inicia sesión.</p>
+      </div>
+    )
   }
 
   return (

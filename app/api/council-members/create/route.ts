@@ -5,8 +5,8 @@ import { isAdmin } from "@/lib/utils/server-utils"
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar permisos
-    if (!isAdmin(request)) {
+    // ✅ Verificar permisos con await
+    if (!(await isAdmin(request))) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
 
@@ -24,10 +24,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 })
     }
 
-    // Subir imagen si existe
+    // ✅ Validación mejorada de imagen
     let imageUrl = null
-    if (image) {
+    if (image && image.size > 0 && image.name !== 'undefined') {
+      console.log(`Subiendo imagen: ${image.name}, tamaño: ${image.size} bytes`)
       imageUrl = await uploadFile(image, "council-members")
+    } else if (image) {
+      console.log(`Archivo inválido detectado: nombre="${image.name}", tamaño=${image.size}`)
     }
 
     // Crear concejal

@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
+import { isAdmin } from "@/lib/utils/server-utils" // ✅ Importar
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ Verificar permisos
+    if (!(await isAdmin(request))) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+    }
+
     const formData = await request.formData()
     const name = formData.get("name") as string
     const color = formData.get("color") as string
