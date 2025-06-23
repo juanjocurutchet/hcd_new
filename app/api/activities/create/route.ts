@@ -5,8 +5,8 @@ import { isAdmin } from "@/lib/utils/server-utils"
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar permisos
-    if (!isAdmin(request)) {
+    // ✅ Verificar permisos con await
+    if (!(await isAdmin(request))) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
 
@@ -14,19 +14,20 @@ export async function POST(request: NextRequest) {
 
     const title = formData.get("title") as string
     const description = formData.get("description") as string
-    const date = formData.get("date") as string
+    const dateStr = formData.get("date") as string
     const image = formData.get("image") as File | null
     const isPublished = formData.get("isPublished") === "true"
-    const participantsJson = formData.get("participants") as string
-    const participants = participantsJson ? JSON.parse(participantsJson) : []
 
-    if (!title || !description || !date) {
+    if (!title || !description || !dateStr) {
       return NextResponse.json({ error: "Título, descripción y fecha son requeridos" }, { status: 400 })
     }
 
-    // Subir imagen si existe
+    // ✅ Procesar fecha correctamente
+    const date = new Date(dateStr)
+
+    // ✅ Subir imagen si existe y tiene contenido
     let imageUrl = null
-    if (image) {
+    if (image && image.size > 0 && image.name !== 'undefined') {
       imageUrl = await uploadFile(image, "activities")
     }
 
@@ -40,24 +41,9 @@ export async function POST(request: NextRequest) {
       RETURNING id
     `
 
-    const activityId = result[0].id
-
-    // Agregar participantes si existen
-    if (participants && participants.length > 0) {
-      for (const participantId of participants) {
-        await sql`
-          INSERT INTO activity_participants (
-            activity_id, council_member_id
-          ) VALUES (
-            ${activityId}, ${participantId}
-          )
-        `
-      }
-    }
-
     return NextResponse.json({
       success: true,
-      id: activityId,
+      id: result[0].id,
     })
   } catch (error: any) {
     console.error("Error al crear actividad:", error)

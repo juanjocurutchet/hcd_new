@@ -1,6 +1,6 @@
 "use client"
 
-import { SetStateAction, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,8 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useSession } from "next-auth/react"
-import { createNews, updateNews } from "@/actions/news-actions"
+import { useApiRequest } from "@/hooks/useApiRequest" // ✅ Importar hook
 
 interface Noticia {
   id?: string;
@@ -25,14 +24,16 @@ export function NoticiaForm({ noticia = null }: { noticia?: Noticia | null }) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
+  const { apiRequest, isAuthenticated } = useApiRequest() // ✅ Usar hook
+
   const [formData, setFormData] = useState({
     title: noticia?.title || "",
     content: noticia?.content || "",
     excerpt: noticia?.excerpt || "",
     isPublished: noticia?.isPublished || false,
   })
+
   const [image, setImage] = useState<File | null>(null)
-  const { data: session } = useSession()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target
@@ -52,24 +53,45 @@ export function NoticiaForm({ noticia = null }: { noticia?: Noticia | null }) {
 
   const handleSubmit = async (e: { preventDefault: () => void }) => {
     e.preventDefault()
+
+    // ✅ Verificar autenticación
+    if (!isAuthenticated) {
+      setError("No hay sesión activa")
+      return
+    }
+
     setIsSubmitting(true)
     setError("")
 
     try {
+      // ✅ Validaciones básicas
+      if (!formData.title.trim()) {
+        throw new Error("El título es requerido")
+      }
+
+      if (!formData.content.trim()) {
+        throw new Error("El contenido es requerido")
+      }
+
       const data = new FormData()
-      data.append("title", formData.title)
-      data.append("content", formData.content)
-      data.append("excerpt", formData.excerpt)
+      data.append("title", formData.title.trim())
+      data.append("content", formData.content.trim())
+      data.append("excerpt", formData.excerpt.trim())
       data.append("isPublished", formData.isPublished.toString())
-      if (image) {
+
+      if (image && image.size > 0) {
         data.append("image", image)
       }
 
-      if (noticia?.id) {
-        await updateNews(parseInt(noticia.id), data, session?.user?.id ?? "", session?.user?.role ?? "")
-      } else {
-        await createNews(data, session?.user?.id ?? "", session?.user?.role ?? "")
-      }
+      const url = noticia?.id ? `/api/news/${noticia.id}` : "/api/news/create"
+      const method = noticia?.id ? "PUT" : "POST"
+
+      // ✅ Usar hook en lugar de server actions
+      await apiRequest(url, {
+        method,
+        body: data,
+        headers: {} // Vacío para FormData
+      })
 
       router.push("/admin-panel/noticias")
       router.refresh()
@@ -77,11 +99,21 @@ export function NoticiaForm({ noticia = null }: { noticia?: Noticia | null }) {
       if (err instanceof Error) {
         setError(err.message)
       } else {
-        setError("An unknown error occurred")
+        setError("Error desconocido")
       }
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // ✅ Mostrar mensaje si no está autenticado
+  if (!isAuthenticated) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>No autorizado. Por favor, inicia sesión.</AlertDescription>
+      </Alert>
+    )
   }
 
   return (
@@ -96,7 +128,7 @@ export function NoticiaForm({ noticia = null }: { noticia?: Noticia | null }) {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="title">Título</Label>
+            <Label htmlFor="title">Título *</Label>
             <Input
               id="title"
               name="title"
@@ -120,7 +152,7 @@ export function NoticiaForm({ noticia = null }: { noticia?: Noticia | null }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content">Contenido</Label>
+            <Label htmlFor="content">Contenido *</Label>
             <Textarea
               id="content"
               name="content"
@@ -134,7 +166,16 @@ export function NoticiaForm({ noticia = null }: { noticia?: Noticia | null }) {
 
           <div className="space-y-2">
             <Label htmlFor="image">Imagen</Label>
-            <Input id="image" name="image" type="file" accept="image/*" onChange={handleImageChange} />
+            <Input
+              id="image"
+              name="image"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+            />
+            {image && (
+              <p className="text-sm text-green-600">Archivo seleccionado: {image.name}</p>
+            )}
           </div>
 
           <div className="flex items-center space-x-2">
@@ -142,7 +183,7 @@ export function NoticiaForm({ noticia = null }: { noticia?: Noticia | null }) {
               id="isPublished"
               name="isPublished"
               checked={formData.isPublished}
-              onCheckedChange={(checked: any) => setFormData({ ...formData, isPublished: checked })}
+              onCheckedChange={(checked: any) => setFormData({ ...formData, isPublished: !!checked })}
             />
             <Label htmlFor="isPublished">Publicar inmediatamente</Label>
           </div>

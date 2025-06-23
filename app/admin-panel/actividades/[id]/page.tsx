@@ -1,32 +1,41 @@
+// app/admin-panel/actividades/[id]/page.tsx
+import { notFound } from "next/navigation"
+import { getActivityById } from "@/lib/services/activity-service"
+import { ActividadForm } from "../components/actividad-form"
 
-import Link from "next/link"
-import { format } from "date-fns"
-import { getAllMessages } from "@/lib/services/message-service"
+interface PageProps {
+  params: Promise<{ id: string }> // ✅ Promise
+}
 
-export default async function MensajesPage() {
-  const mensajes = await getAllMessages()
+// app/admin-panel/actividades/[id]/page.tsx
+export default async function EditarActividadPage({ params }: PageProps) {
+  const { id } = await params
+  const numericId = Number.parseInt(id)
+  if (isNaN(numericId)) notFound()
+
+  const actividad = await getActivityById(numericId) as any
+  if (!actividad) notFound()
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Mensajes de Contacto</h1>
+    <div className="max-w-4xl mx-auto py-8 px-4">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Editar Actividad</h1>
+        <p className="text-gray-600">Modifica la información de la actividad</p>
       </div>
 
-      <ul className="divide-y divide-gray-200 border rounded-md">
-        {mensajes.map((msg) => (
-          <li key={msg.id} className="p-4">
-            <Link
-              href={`/admin-panel/mensajes/${msg.id}`}
-              className="font-medium text-lg text-blue-700 hover:underline"
-            >
-              {msg.subject}
-            </Link>
-            <p className="text-sm text-gray-500">
-              {msg.name} — {msg.email} — {format(new Date(msg.createdAt), "dd/MM/yyyy HH:mm")}
-            </p>
-          </li>
-        ))}
-      </ul>
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <ActividadForm
+          actividad={{
+            ...actividad,
+            id: String(actividad.id),
+            date: actividad.date instanceof Date
+              ? actividad.date.toISOString()
+              : new Date(actividad.date).toISOString(),
+            location: actividad.location ?? "",
+            imageUrl: actividad.imageUrl ?? undefined,
+          }}
+        />
+      </div>
     </div>
   )
 }

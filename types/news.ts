@@ -1,13 +1,13 @@
-export type News = {
+export interface News {
   id: number
   title: string
   content: string
   excerpt: string | null
   imageUrl: string | null
-  publishedAt: Date
-  createdAt: Date
-  updatedAt: Date
+  publishedAt: Date | null
   authorId: number | null
   slug: string
   isPublished: boolean
+  createdAt: Date
+  updatedAt: Date
 }

@@ -118,10 +118,12 @@ export const contactMessages = pgTable("contact_messages", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
+// lib/db/schema.ts
 export const activities = pgTable("activities", {
   id: serial("id").primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description").notNull(),
+  location: varchar("location", { length: 255 }),
   date: timestamp("date").notNull(),
   imageUrl: varchar("image_url", { length: 255 }),
   isPublished: boolean("is_published").default(true).notNull(),

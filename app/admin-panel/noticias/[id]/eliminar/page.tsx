@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation"
 import { getNewsById } from "@/lib/services/news-service"
-import { NoticiaForm } from "../../components/noticia-form"
-
+import EliminarNoticiaForm from "@/app/admin-panel/noticias/components/eliminar-noticia-form"
 
 interface PageProps {
   params: {
@@ -9,28 +8,18 @@ interface PageProps {
   }
 }
 
-export default async function EditarNoticiaPage({ params }: PageProps) {
-  const id = Number.parseInt(params.id)
+export default async function EliminarNoticiaPage({ params }: PageProps) {
+  const { id } = await params
+const numericId = Number.parseInt(id)
 
-  if (isNaN(id)) {
-    notFound()
-  }
+  if (isNaN(numericId)) notFound()
 
-  const noticia = await getNewsById(id)
-
-  if (!noticia) {
-    notFound()
-  }
+  const noticia = await getNewsById(numericId)
+  if (!noticia) notFound()
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Editar Noticia</h1>
-      </div>
-
-      <div className="bg-white rounded-md shadow p-6">
-        <NoticiaForm noticia={{ ...noticia, id: String(noticia.id), excerpt: noticia.excerpt ?? undefined }} />
-      </div>
+    <div className="max-w-2xl mx-auto py-10">
+      <EliminarNoticiaForm noticia={{ id: noticia.id, title: noticia.title }} />
     </div>
   )
 }

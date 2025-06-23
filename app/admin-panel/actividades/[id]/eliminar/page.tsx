@@ -1,19 +1,18 @@
+// app/admin-panel/actividades/[id]/eliminar/page.tsx
 import { getActivityById } from "@/lib/services/activity-service"
 import { notFound } from "next/navigation"
 import EliminarActividadForm from "../../components/eliminar-actividad-form"
 
-
 interface PageProps {
-  params: {
-    id: string
-  }
+  params: Promise<{ id: string }>
 }
 
 export default async function EliminarActividadPage({ params }: PageProps) {
-  const id = Number.parseInt(params.id)
-  if (isNaN(id)) notFound()
+  const { id } = await params
+  const numericId = Number.parseInt(id)
+  if (isNaN(numericId)) notFound()
 
-  const actividad = await getActivityById(id)
+  const actividad = await getActivityById(numericId)
   if (!actividad) notFound()
 
   return (
@@ -22,4 +21,3 @@ export default async function EliminarActividadPage({ params }: PageProps) {
     </div>
   )
 }
-

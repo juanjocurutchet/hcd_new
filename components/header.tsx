@@ -42,7 +42,7 @@ export default function Header() {
           <div className="flex items-center mb-4 md:mb-0">
             <div className="relative h-16 w-16 mr-4">
               <Image
-                src="/municipal-shield.png"
+                src="/logo_hcd.png"
                 alt="Logo HCD Las Flores"
                 width={64}
                 height={64}

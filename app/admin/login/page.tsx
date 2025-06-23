@@ -41,7 +41,7 @@ export default function LoginPage() {
     <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-lg text-center">
       <div className="mb-4">
         <Image
-          src="/municipal-shield.png"
+          src="/logo_hcd.png"
           alt="HCD Las Flores"
           width={60}
           height={60}

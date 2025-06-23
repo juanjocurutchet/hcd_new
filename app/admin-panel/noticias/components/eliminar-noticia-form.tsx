@@ -1,9 +1,11 @@
 "use client"
 
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
+import { useApiRequest } from "@/hooks/useApiRequest" // ✅ Importar hook
 
 interface EliminarNoticiaFormProps {
   noticia: {
@@ -13,57 +15,80 @@ interface EliminarNoticiaFormProps {
 }
 
 export default function EliminarNoticiaForm({ noticia }: EliminarNoticiaFormProps) {
-  const { data: session } = useSession()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const { apiRequest, isAuthenticated } = useApiRequest() // ✅ Usar hook
 
   const handleDelete = async () => {
+    // ✅ Verificar autenticación
+    if (!isAuthenticated) {
+      setError("No hay sesión activa")
+      return
+    }
+
+    if (!confirm("¿Estás seguro de que quieres eliminar esta noticia? Esta acción no se puede deshacer.")) {
+      return
+    }
+
     setIsLoading(true)
     setError("")
 
     try {
-      const res = await fetch(`/api/news/${noticia.id}`, {
-        method: "DELETE",
-        headers: {
-          "x-user-id": session?.user?.id ?? "",
-          "x-user-role": session?.user?.role ?? "",
-        },
+      // ✅ Usar hook en lugar de fetch manual
+      await apiRequest(`/api/news/${noticia.id}`, {
+        method: "DELETE"
       })
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Error al eliminar la noticia")
-      }
-
       router.push("/admin-panel/noticias")
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message)
-      } else {
-        setError("Error inesperado")
-      }
+      router.refresh()
+    } catch (err: any) {
+      console.error("Error al eliminar noticia:", err)
+      setError(err.message || "Error al eliminar la noticia")
     } finally {
       setIsLoading(false)
     }
   }
 
+  // ✅ Mostrar mensaje si no está autenticado
+  if (!isAuthenticated) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>No autorizado. Por favor, inicia sesión.</AlertDescription>
+      </Alert>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-red-50 border border-red-200 rounded-md p-4">
-        <h3 className="text-lg font-medium text-red-800">¿Estás seguro de que quieres eliminar esta noticia?</h3>
-        <p className="mt-2 text-sm text-red-700">
-          Esta acción no se puede deshacer. Se eliminará permanentemente la noticia <strong>{noticia.title}</strong>.
-        </p>
+        <div className="flex">
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-red-800">
+              ¿Estás seguro de que quieres eliminar esta noticia?
+            </h3>
+            <div className="mt-2 text-sm text-red-700">
+              <p>
+                Se eliminará permanentemente la noticia <strong>"{noticia.title}"</strong>. Esta acción no se puede deshacer.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-      <div className="flex gap-4">
-        <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
+      <div className="flex justify-end space-x-4">
+        <Button variant="outline" onClick={() => router.back()} disabled={isLoading}>
           Cancelar
         </Button>
-        <Button type="button" variant="destructive" onClick={handleDelete} disabled={isLoading}>
+        <Button variant="destructive" onClick={handleDelete} disabled={isLoading}>
           {isLoading ? "Eliminando..." : "Eliminar Noticia"}
         </Button>
       </div>
