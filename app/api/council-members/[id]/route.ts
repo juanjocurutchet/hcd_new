@@ -16,46 +16,10 @@ async function validateAdminAndId(request: NextRequest, idParam: string) {
   return { id }
 }
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const id = Number.parseInt(params.id)
-
-    if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
-    }
-
-    const members = await sql`
-      SELECT cm.id, cm.name, cm.position, cm.block_id, cm.mandate, cm.image_url, cm.bio, cm.is_active,
-             pb.name as block_name, pb.color as block_color
-      FROM council_members cm
-      LEFT JOIN political_blocks pb ON cm.block_id = pb.id
-      WHERE cm.id = ${id}
-    `
-
-    if (members.length === 0) {
-      return NextResponse.json({ error: "Concejal no encontrado" }, { status: 404 })
-    }
-
-    const committees = await sql`
-      SELECT c.id, c.name, c.description
-      FROM committees c
-      JOIN committee_members cm ON c.id = cm.committee_id
-      WHERE cm.council_member_id = ${id}
-    `
-
-    return NextResponse.json({
-      ...members[0],
-      committees,
-    })
-  } catch (error) {
-    console.error(`Error obteniendo concejal con id ${params.id}:`, error)
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
-  }
-}
-
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id, error } = await validateAdminAndId(request, params.id)
+    const idParam = params.id
+    const { id: numericId, error } = await validateAdminAndId(request, idParam)
     if (error) return error
 
     const formData = await request.formData()
@@ -69,21 +33,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const block_id = blockId && blockId !== "-1" ? Number.parseInt(blockId) : null
 
-    const currentMember = await sql`
-      SELECT image_url FROM council_members WHERE id = ${id}
-    `
-
-    let image_url = currentMember[0]?.image_url || null
+    const current = await sql`SELECT image_url FROM council_members WHERE id = ${numericId}`
+    let image_url = current[0]?.image_url || null
 
     if (image && image.size > 0) {
-      try {
-        console.log("Subiendo imagen a Cloudinary:", image.name)
-        image_url = await uploadFile(image, "concejales")
-        console.log("Imagen subida exitosamente:", image_url)
-      } catch (uploadError) {
-        console.error("Error subiendo imagen:", uploadError)
-        return NextResponse.json({ error: "Error al subir la imagen" }, { status: 500 })
-      }
+      image_url = await uploadFile(image, "concejales")
     }
 
     const result = await sql`
@@ -95,30 +49,30 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           image_url = ${image_url},
           bio = ${bio},
           is_active = ${isActive}
-      WHERE id = ${id}
+      WHERE id = ${numericId}
       RETURNING *
     `
 
-    if (result.length === 0) {
-      return NextResponse.json({ error: "Concejal no encontrado" }, { status: 404 })
-    }
-
-    return NextResponse.json(result[0])
+    return result.length
+      ? NextResponse.json(result[0])
+      : NextResponse.json({ error: "Concejal no encontrado" }, { status: 404 })
   } catch (error) {
-    console.error(`Error actualizando concejal con id ${params.id}:`, error)
+    console.error("Error en PUT:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
-
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+// Eliminar un concejal
+export async function DELETE(
+  request: NextRequest,
+  context: { params: { id: string } } // Tipo explícito para `params`
+) {
   try {
-    const { id, error } = await validateAdminAndId(request, params.id)
+    const idParam = context.params.id // Acceso correcto a `params`
+    const { id: numericId, error } = await validateAdminAndId(request, idParam)
     if (error) return error
 
     const result = await sql`
-      DELETE FROM council_members
-      WHERE id = ${id}
-      RETURNING *
+      DELETE FROM council_members WHERE id = ${numericId} RETURNING *
     `
 
     if (result.length === 0) {
@@ -127,7 +81,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     return NextResponse.json({ message: "Concejal eliminado correctamente" })
   } catch (error) {
-    console.error(`Error eliminando concejal con id ${params.id}:`, error)
+    console.error("Error al eliminar:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }

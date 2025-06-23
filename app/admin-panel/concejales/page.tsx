@@ -1,28 +1,78 @@
 import { getAllCouncilMembers } from "@/lib/services/session-service"
+import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export default async function ConcejalesPage() {
   const concejales = await getAllCouncilMembers()
 
+  // Agrupar por bloque
+  const concejalesPorBloque = concejales.reduce<Record<string, typeof concejales>>((acc, concejal) => {
+    const bloque = concejal.blockName || "Sin bloque asignado"
+    if (!acc[bloque]) acc[bloque] = []
+    acc[bloque].push(concejal)
+    return acc
+  }, {})
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Concejales</h1>
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Concejales</h1>
         <Link href="/admin-panel/concejales/nuevo" className="text-blue-600 hover:underline">
           Agregar concejal
         </Link>
       </div>
 
-      <ul className="divide-y divide-gray-200 border rounded-md">
-        {concejales.map((c) => (
-          <li key={c.id} className="p-4">
-            <Link href={`/admin-panel/concejales/${c.id}`} className="font-medium text-lg text-blue-700 hover:underline">
-              {c.name} {c.position ? `— ${c.position}` : ""}
-            </Link>
-            {c.blockName && <p className="text-sm text-gray-500">Bloque: {c.blockName}</p>}
-          </li>
+      <div className="space-y-6">
+        {Object.entries(concejalesPorBloque).map(([bloque, concejalesDelBloque]) => (
+          <div key={bloque} className="bg-white border rounded shadow-sm">
+            <h2 className="px-4 py-3 font-semibold bg-gray-100 border-b">Bloque: {bloque}</h2>
+            <ul>
+              {concejalesDelBloque.map((concejal) => (
+                <li
+                  key={concejal.id}
+                  className="flex justify-between items-center px-4 py-3 border-t hover:bg-gray-50"
+                >
+                  <div className="flex items-center gap-4">
+                    {concejal.imageUrl ? (
+                      <Image
+                        src={concejal.imageUrl}
+                        alt={concejal.name}
+                        width={40}
+                        height={40}
+                        className="rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-300 rounded-full" />
+                    )}
+                    <div>
+                      <div className="font-medium">{concejal.name}</div>
+                      <div className="text-sm text-gray-500">{concejal.blockName || "Sin bloque"}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/admin-panel/concejales/${concejal.id}`}
+                      className="text-blue-600 hover:underline"
+                      prefetch={false}
+                    >
+                      Editar
+                    </Link>
+                    <Link
+                      href={`/admin-panel/concejales/${concejal.id}/eliminar`}
+                      className="text-red-600 hover:underline"
+                      prefetch={false}
+                    >
+                      Eliminar
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   )
 }

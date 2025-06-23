@@ -1,146 +1,113 @@
 "use client"
 
 import { useState } from "react"
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Button } from "@/components/ui/button"
-import { createCouncilMember, updateCouncilMember } from "@/actions/council-actions"
+import type { CouncilMember, PoliticalBlockWithPresident } from "@/actions/council-actions"
 
-
-interface Concejal {
-  id?: number
-  name: string
-  position?: string | null
-  block_id?: number | null
-  mandate?: string | null
-  image_url?: string | null
-  bio?: string | null
-  is_active: boolean
+interface ConcejalFormProps {
+  bloques: PoliticalBlockWithPresident[]
+  concejal?: CouncilMember | null
 }
 
-interface Block {
-  id: number
-  name: string
-}
-
-interface Props {
-  concejal?: Concejal
-  bloques: Block[]
-}
-
-export default function ConcejalForm({ concejal, bloques }: Props) {
-  const [formData, setFormData] = useState({
-    name: concejal?.name || "",
-    position: concejal?.position || "",
-    blockId: concejal?.block_id?.toString() || "-1",
-    mandate: concejal?.mandate || "",
-    bio: concejal?.bio || "",
-    isActive: concejal?.is_active ?? true,
-  })
-  const [image, setImage] = useState<File | null>(null)
-  const [loading, setLoading] = useState(false)
-  const { data: session } = useSession()
+export default function ConcejalForm({ concejal, bloques }: ConcejalFormProps) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const router = useRouter()
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
-  }
-
-  const handleCheckbox = (checked: boolean) => {
-    setFormData({ ...formData, isActive: checked })
-  }
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (files && files[0]) setImage(files[0])
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
+    setError("")
+    setSuccess("")
 
-    const data = new FormData()
-    data.append("name", formData.name)
-    data.append("position", formData.position)
-    data.append("blockId", formData.blockId)
-    data.append("mandate", formData.mandate)
-    data.append("bio", formData.bio)
-    data.append("isActive", String(formData.isActive))
-    if (image) data.append("image", image)
+    const formData = new FormData(e.currentTarget)
+    const url = concejal?.id ? `/api/council-members/${concejal.id}` : "/api/council-members/create"
+    const method = concejal?.id ? "PUT" : "POST"
 
     try {
-      if (concejal?.id) {
-        await updateCouncilMember(concejal.id, data, session?.user?.id ?? "", session?.user?.role ?? "")
-      } else {
-        await createCouncilMember(data, session?.user?.id ?? "", session?.user?.role ?? "")
+      const token = localStorage.getItem("token")
+      const response = await fetch(url, {
+        method,
+        body: formData,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Error al guardar el concejal")
       }
+
+      setSuccess(concejal ? "Concejal actualizado correctamente" : "Concejal creado correctamente")
       router.push("/admin-panel/concejales")
-    } catch (err) {
-      console.error("Error al guardar concejal:", err)
+      router.refresh()
+    } catch (err: any) {
+      console.error("Error:", err)
+      setError(err.message || "Error desconocido")
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="name">Nombre</Label>
-        <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
+      <div>
+        <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nombre *</label>
+        <input type="text" id="name" name="name" required defaultValue={concejal?.name || ""}
+               className="mt-1 block w-full border rounded-md px-3 py-2" />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="position">Cargo</Label>
-        <Input id="position" name="position" value={formData.position} onChange={handleChange} />
+      <div>
+        <label htmlFor="position" className="block text-sm font-medium text-gray-700">Cargo</label>
+        <input type="text" id="position" name="position" defaultValue={concejal?.position || ""}
+               className="mt-1 block w-full border rounded-md px-3 py-2" />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="blockId">Bloque</Label>
-        <select
-          id="blockId"
-          name="blockId"
-          value={formData.blockId}
-          onChange={handleChange}
-          className="w-full border rounded px-2 py-1"
-        >
+      <div>
+        <label htmlFor="blockId" className="block text-sm font-medium text-gray-700">Bloque Político</label>
+        <select id="blockId" name="blockId" defaultValue={concejal?.blockId?.toString() || "-1"}
+                className="mt-1 block w-full border rounded-md px-3 py-2">
           <option value="-1">Sin bloque asignado</option>
-          {bloques.map((b) => (
-            <option key={b.id} value={b.id.toString()}>
-              {b.name}
-            </option>
+          {bloques.map((bloque) => (
+            <option key={bloque.id} value={bloque.id}>{bloque.name}</option>
           ))}
         </select>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="mandate">Mandato</Label>
-        <Input id="mandate" name="mandate" value={formData.mandate} onChange={handleChange} />
+      <div>
+        <label htmlFor="mandate" className="block text-sm font-medium text-gray-700">Mandato</label>
+        <input type="text" id="mandate" name="mandate" defaultValue={concejal?.mandate || ""}
+               className="mt-1 block w-full border rounded-md px-3 py-2" />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="bio">Biografía</Label>
-        <Textarea id="bio" name="bio" value={formData.bio} onChange={handleChange} rows={4} />
+      <div>
+        <label htmlFor="bio" className="block text-sm font-medium text-gray-700">Biografía</label>
+        <textarea id="bio" name="bio" defaultValue={concejal?.bio || ""}
+                  className="mt-1 block w-full border rounded-md px-3 py-2" rows={4}></textarea>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="image">Imagen</Label>
-        <Input id="image" name="image" type="file" accept="image/*" onChange={handleImageChange} />
+      <div>
+        <label htmlFor="image" className="block text-sm font-medium text-gray-700">Foto</label>
+        <input type="file" id="image" name="image"
+               className="mt-1 block w-full" accept="image/*" />
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Checkbox id="isActive" name="isActive" checked={formData.isActive} onCheckedChange={handleCheckbox} />
-        <Label htmlFor="isActive">Activo</Label>
+      <div className="flex items-center">
+        <input type="checkbox" id="isActive" name="isActive" defaultChecked={concejal?.isActive ?? true}
+               className="h-4 w-4 text-blue-600 border-gray-300 rounded" />
+        <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700">Activo</label>
       </div>
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={loading}>
-          {loading ? "Guardando..." : concejal ? "Actualizar" : "Crear"}
-        </Button>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      {success && <p className="text-sm text-green-600">{success}</p>}
+
+      <div className="flex justify-end space-x-3">
+        <button type="button" onClick={() => router.back()}
+                className="px-4 py-2 border rounded-md bg-white text-gray-700">Cancelar</button>
+        <button type="submit" disabled={isLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50">
+          {isLoading ? "Guardando..." : concejal ? "Actualizar Concejal" : "Crear Concejal"}
+        </button>
       </div>
     </form>
   )

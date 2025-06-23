@@ -1,3 +1,5 @@
+// app/admin-panel/login/page.tsx
+
 "use client"
 
 import { useState } from "react"
@@ -20,10 +22,12 @@ export default function LoginPage() {
       headers: { "Content-Type": "application/json" },
     })
 
-    if (res.ok) {
+    const data = await res.json()
+
+    if (res.ok && data.token) {
+      localStorage.setItem("token", data.token)
       router.push("/admin-panel")
     } else {
-      const data = await res.json()
       setError(data.error || "Error al iniciar sesión")
     }
   }
@@ -44,39 +48,32 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4 text-left">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Correo electrónico
-          </label>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700">Correo electrónico</label>
           <input
             id="email"
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="mt-1 w-full px-4 py-2 border rounded-md"
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-            Contraseña
-          </label>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700">Contraseña</label>
           <input
             id="password"
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="mt-1 w-full px-4 py-2 border rounded-md"
           />
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white font-semibold py-2 rounded-md hover:bg-blue-700 transition"
-        >
+        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition">
           Ingresar
         </button>
       </form>
