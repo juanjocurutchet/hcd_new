@@ -1,6 +1,6 @@
 import { db } from "@/lib/db-singleton"
 import { councilMembers, politicalBlocks } from "@/lib/db/schema"
-import { eq, asc, sql, and, inArray } from "drizzle-orm"
+import { and, asc, eq, inArray, sql } from "drizzle-orm"
 
 export type CouncilMember = {
   id: number
@@ -62,6 +62,8 @@ export async function getAuthorities() {
       id: councilMembers.id,
       name: councilMembers.name,
       position: councilMembers.position,
+      seniorPosition: councilMembers.seniorPosition,
+      imageUrl: councilMembers.imageUrl,
       email: councilMembers.email,
       blockName: politicalBlocks.name,
     })
@@ -70,11 +72,10 @@ export async function getAuthorities() {
     .where(
       and(
         eq(councilMembers.isActive, true),
-        inArray(councilMembers.position, [
-          "Presidente",
-          "Vicepresidente 1°",
-          "Visepresidente 2°",
-          "Secretario Legislativo",
+        inArray(sql`${councilMembers.seniorPosition}`, [
+          "presidente_hcd",
+          "vicepresidente1_hcd",
+          "vicepresidente2_hcd"
         ])
       )
     )
@@ -142,6 +143,30 @@ export async function getAllPoliticalBlocksWithPresident(): Promise<(PoliticalBl
   }
 }
 
+export async function getCouncilMembersByBlock(blockId: number): Promise<CouncilMember[]> {
+  try {
+    return await db
+      .select({
+        id: councilMembers.id,
+        name: councilMembers.name,
+        imageUrl: councilMembers.imageUrl,
+        createdAt: councilMembers.createdAt,
+        updatedAt: councilMembers.updatedAt,
+        position: councilMembers.position,
+        blockId: councilMembers.blockId,
+        mandate: councilMembers.mandate,
+        bio: councilMembers.bio,
+        isActive: councilMembers.isActive,
+      })
+      .from(councilMembers)
+      .where(and(eq(councilMembers.blockId, blockId), eq(councilMembers.isActive, true)))
+      .orderBy(asc(councilMembers.name))
+  } catch (error) {
+    console.error("Error al obtener concejales del bloque:", error)
+    return []
+  }
+}
+
 // actions/concejal-actions.ts
 
 export async function updateCouncilMember(id: number, formData: FormData, userId: string, role: string) {
@@ -178,4 +203,18 @@ export async function createCouncilMember(formData: FormData, userId: string, ro
   }
 
   return await response.json()
+}
+
+export async function getSecretarioHCD() {
+  const result = await db.execute(
+    sql`SELECT id, name, position, image_url as "imageUrl", NULL as email, NULL as blockName FROM staff WHERE position = 'secretario_hcd' LIMIT 1`
+  )
+  return result.rows[0] || null
+}
+
+export async function getSecretarioByBlockId(blockId: number) {
+  const result = await db.execute(
+    sql`SELECT s.*, s.image_url as "imageUrl", pb.name as blockName FROM staff s LEFT JOIN political_blocks pb ON s.block_id = pb.id WHERE s.position = 'secretario_bloque' AND s.block_id = ${blockId} LIMIT 1`
+  )
+  return result.rows[0] || null
 }

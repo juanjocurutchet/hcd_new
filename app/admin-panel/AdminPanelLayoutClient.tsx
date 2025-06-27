@@ -1,24 +1,24 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { usePathname } from "next/navigation"
-import Link from "next/link"
-import { signOut } from "next-auth/react"
 import {
-  FileText,
-  Users,
-  Newspaper,
+  Activity,
   Calendar,
-  MessageSquare,
-  User,
+  FileText,
+  Home,
+  Layers,
   LogOut,
   Menu,
-  X,
-  Home,
+  MessageSquare,
+  Newspaper,
+  User,
   UserPlus,
-  Layers,
-  Activity,
+  Users,
+  X,
 } from "lucide-react"
+import { signOut } from "next-auth/react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 
 import { ReactNode } from "react"
 
@@ -57,6 +57,7 @@ export default function AdminPanelLayoutClient({ children }: { children: ReactNo
     { name: "Documentos", href: "/admin-panel/documentos", icon: <FileText className="h-5 w-5" /> },
     { name: "Sesiones", href: "/admin-panel/sesiones", icon: <Calendar className="h-5 w-5" /> },
     { name: "Concejales", href: "/admin-panel/concejales", icon: <User className="h-5 w-5" /> },
+    { name: "Personal", href: "/admin-panel/personal", icon: <Users className="h-5 w-5" /> },
     { name: "Bloques", href: "/admin-panel/bloques", icon: <Users className="h-5 w-5" /> },
     { name: "Comisiones", href: "/admin-panel/comisiones", icon: <Layers className="h-5 w-5" /> },
     { name: "Actividades", href: "/admin-panel/actividades", icon: <Activity className="h-5 w-5" /> },

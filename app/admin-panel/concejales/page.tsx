@@ -1,7 +1,6 @@
 import { getAllCouncilMembers } from "@/lib/services/session-service"
-import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { ConcejalFicha } from "./components/ConcejalFicha"
 
 export default async function ConcejalesPage() {
   const concejales = await getAllCouncilMembers()
@@ -34,21 +33,7 @@ export default async function ConcejalesPage() {
                   className="flex justify-between items-center px-4 py-3 border-t hover:bg-gray-50"
                 >
                   <div className="flex items-center gap-4">
-                    {concejal.imageUrl ? (
-                      <Image
-                        src={concejal.imageUrl}
-                        alt={concejal.name}
-                        width={40}
-                        height={40}
-                        className="rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-300 rounded-full" />
-                    )}
-                    <div>
-                      <div className="font-medium">{concejal.name}</div>
-                      <div className="text-sm text-gray-500">{concejal.blockName || "Sin bloque"}</div>
-                    </div>
+                    <ConcejalFicha concejal={concejal} />
                   </div>
 
                   <div className="flex gap-2">

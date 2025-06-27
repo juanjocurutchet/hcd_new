@@ -1,85 +1,49 @@
+import { getAuthorities, getSecretarioHCD } from "@/actions/council-actions"
 import type { Metadata } from "next"
-import { getAuthorities } from "@/actions/council-actions"
+import { Autoridad as AutoridadType, FichaAutoridad } from "./FichaAutoridad"
 
 export const metadata: Metadata = {
   title: "Autoridades | HCD Las Flores",
   description: "Autoridades del Honorable Concejo Deliberante de Las Flores",
 }
 
-type Autoridad = {
-  id: number
-  name: string
-  position: string | null
-  email: string | null
-  blockName: string | null
-}
+type Autoridad = AutoridadType
 
 export default async function AutoridadesPage() {
   const autoridades: Autoridad[] = await getAuthorities()
+  const secretarioHCD = await getSecretarioHCD()
 
-  const findByPosition = (position: string) =>
-    autoridades.find((a) => a.position?.toLowerCase() === position.toLowerCase())
+  // Mapeo de cargos internos a nombres legibles
+  const cargoLegible = (seniorPosition: string | null | undefined) => {
+    switch (seniorPosition) {
+      case "presidente_hcd":
+        return "Presidente - H. Concejo Deliberante"
+      case "vicepresidente1_hcd":
+        return "Vicepresidente 1° - H. Concejo Deliberante"
+      case "vicepresidente2_hcd":
+        return "Vicepresidente 2° - H. Concejo Deliberante"
+      default:
+        return seniorPosition || ""
+    }
+  }
 
-  const presidente = findByPosition("Presidente")
-  const vicepresidente = findByPosition("Vicepresidente 1°")
-  const secretario = findByPosition("Secretario Legislativo")
-  const prosecretaria = findByPosition("Prosecretaria Administrativa")
+  const presidente = autoridades.find(a => a.seniorPosition === "presidente_hcd")
+  const vicepresidente1 = autoridades.find(a => a.seniorPosition === "vicepresidente1_hcd")
+  const vicepresidente2 = autoridades.find(a => a.seniorPosition === "vicepresidente2_hcd")
 
   return (
     <div className="max-w-[1200px] mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6 text-[#0e4c7d]">Autoridades</h1>
-
-      <div className="bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-2xl font-semibold mb-4 text-[#0e4c7d]">Autoridades del Concejo Deliberante</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {presidente && (
-            <div className="border-b pb-4 md:border-b-0 md:border-r md:pr-4">
-              <h3 className="text-xl font-semibold mb-2">Presidente</h3>
-              <p className="text-lg mb-1">{presidente.name}</p>
-              <p className="text-gray-600 mb-4">{presidente.blockName ?? "Sin bloque"}</p>
-              <p className="text-sm">
-                <strong>Contacto:</strong> {presidente.email ?? "No disponible"}
-              </p>
-            </div>
-          )}
-
-          {vicepresidente && (
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Vicepresidente 1°</h3>
-              <p className="text-lg mb-1">{vicepresidente.name}</p>
-              <p className="text-gray-600 mb-4">{vicepresidente.blockName ?? "Sin bloque"}</p>
-              <p className="text-sm">
-                <strong>Contacto:</strong> {vicepresidente.email ?? "No disponible"}
-              </p>
-            </div>
-          )}
+      <h1 className="text-3xl font-bold mb-6 text-[#0e4c7d]">Autoridades del H. Concejo Deliberante</h1>
+      <div className="bg-white shadow-md rounded-lg p-8 flex flex-col items-center">
+        {/* Presidente */}
+        {presidente && <FichaAutoridad autoridad={presidente} cargo={cargoLegible(presidente.seniorPosition)} />}
+        {/* Vicepresidentes */}
+        <div className="flex flex-col md:flex-row justify-center gap-8 w-full mb-8">
+          {vicepresidente1 && <FichaAutoridad autoridad={vicepresidente1} cargo={cargoLegible(vicepresidente1.seniorPosition)} />}
+          {vicepresidente2 && <FichaAutoridad autoridad={vicepresidente2} cargo={cargoLegible(vicepresidente2.seniorPosition)} />}
         </div>
-
-        <div className="mt-8 pt-6 border-t">
-          <h3 className="text-xl font-semibold mb-4">Secretaría</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {secretario && (
-              <div>
-                <h4 className="text-lg font-medium mb-2">Secretario Legislativo</h4>
-                <p className="mb-1">{secretario.name}</p>
-                <p className="text-sm">
-                  <strong>Contacto:</strong> {secretario.email ?? "No disponible"}
-                </p>
-              </div>
-            )}
-
-            {prosecretaria && (
-              <div>
-                <h4 className="text-lg font-medium mb-2">Prosecretaria Administrativa</h4>
-                <p className="mb-1">{prosecretaria.name}</p>
-                <p className="text-sm">
-                  <strong>Contacto:</strong> {prosecretaria.email ?? "No disponible"}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Secretario/a */}
+        {secretarioHCD && <FichaAutoridad autoridad={secretarioHCD} cargo="Secretario/a - H. Concejo Deliberante" />}
       </div>
     </div>
   )

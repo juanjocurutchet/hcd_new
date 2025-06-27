@@ -7,13 +7,25 @@ async function validateAdminAndId(request: NextRequest, idParam: string) {
   if (!(await isAdmin(request))) {
     return { error: NextResponse.json({ error: "No autorizado" }, { status: 403 }) }
   }
-
   const id = Number.parseInt(idParam)
   if (isNaN(id)) {
     return { error: NextResponse.json({ error: "ID inválido" }, { status: 400 }) }
   }
-
   return { id }
+}
+
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
+  try {
+    const { id: idParam } = context.params
+    const id = Number.parseInt(idParam)
+    if (isNaN(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
+    const result = await sql`SELECT * FROM staff WHERE id = ${id}`
+    return result.length
+      ? NextResponse.json(result[0])
+      : NextResponse.json({ error: "Personal no encontrado" }, { status: 404 })
+  } catch (error) {
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+  }
 }
 
 export async function PUT(request: NextRequest, context: { params: { id: string } }) {
@@ -22,46 +34,42 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
     const idParam = params.id;
     const { id: numericId, error } = await validateAdminAndId(request, idParam)
     if (error) return error
-
     const formData = await request.formData()
     const name = formData.get("name") as string
     const position = formData.get("position") as string
     const blockIdRaw = formData.get("blockId") as string | null
-    const block_id = blockIdRaw && blockIdRaw !== "-1" ? Number(blockIdRaw) : null
-    const mandate = formData.get("mandate") as string
+    const blockId = blockIdRaw && blockIdRaw !== "-1" ? Number(blockIdRaw) : null
     const bio = formData.get("bio") as string
-    const isActiveRaw = formData.getAll("isActive")
-    const isActive = isActiveRaw.includes("true")
     const image = formData.get("image") as File | null
-    const seniorPosition = formData.get("seniorPosition") as string | null
-
-    const current = await sql`SELECT image_url FROM council_members WHERE id = ${numericId}`
-    let image_url = current[0]?.image_url || null
-
+    const email = formData.get("email") as string | null
+    const telefono = formData.get("telefono") as string | null
+    const facebook = formData.get("facebook") as string | null
+    const instagram = formData.get("instagram") as string | null
+    const twitter = formData.get("twitter") as string | null
+    const current = await sql`SELECT image_url FROM staff WHERE id = ${numericId}`
+    let imageUrl = current[0]?.image_url || null
     if (image && image.size > 0) {
-      image_url = await uploadFile(image, "concejales")
+      imageUrl = await uploadFile(image, "staff")
     }
-
     const result = await sql`
-      UPDATE council_members
+      UPDATE staff
       SET name = ${name},
           position = ${position},
-          senior_position = ${seniorPosition},
-          block_id = ${block_id},
-          mandate = ${mandate},
-          image_url = ${image_url},
+          block_id = ${blockId},
           bio = ${bio},
-          is_active = ${isActive}
+          image_url = ${imageUrl},
+          email = ${email},
+          telefono = ${telefono},
+          facebook = ${facebook},
+          instagram = ${instagram},
+          twitter = ${twitter}
       WHERE id = ${numericId}
       RETURNING *
     `
-
     return result.length
       ? NextResponse.json(result[0])
-      : NextResponse.json({ error: "Concejal no encontrado" }, { status: 404 })
-
+      : NextResponse.json({ error: "Personal no encontrado" }, { status: 404 })
   } catch (error) {
-    console.error("Error en PUT:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
@@ -72,45 +80,15 @@ export async function DELETE(request: NextRequest, context: { params: { id: stri
     const idParam = params.id
     const { id: numericId, error } = await validateAdminAndId(request, idParam)
     if (error) return error
-
-    // Desvincular como presidente en committees
-    await sql`
-      UPDATE committees
-      SET president_id = NULL
-      WHERE president_id = ${numericId}
-    `
-
-    // Desvincular como secretario en committees
-    await sql`
-      UPDATE committees
-      SET secretary_id = NULL
-      WHERE secretary_id = ${numericId}
-    `
-
-    // Eliminar participación en committee_members
-    await sql`
-      DELETE FROM committee_members
-      WHERE council_member_id = ${numericId}
-    `
-
-    // Eliminar participación en activity_participants
-    await sql`
-      DELETE FROM activity_participants
-      WHERE council_member_id = ${numericId}
-    `
-
-    // Finalmente, eliminar el concejal
     const result = await sql`
-      DELETE FROM council_members
+      DELETE FROM staff
       WHERE id = ${numericId}
       RETURNING *
     `
-
     return result.length
-      ? NextResponse.json({ message: "Concejal eliminado correctamente" })
-      : NextResponse.json({ error: "Concejal no encontrado" }, { status: 404 })
+      ? NextResponse.json({ message: "Personal eliminado correctamente" })
+      : NextResponse.json({ error: "Personal no encontrado" }, { status: 404 })
   } catch (error) {
-    console.error("Error al eliminar:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }

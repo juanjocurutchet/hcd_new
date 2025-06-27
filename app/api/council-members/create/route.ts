@@ -1,7 +1,7 @@
-import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 import { uploadFile } from "@/lib/storage"
 import { isAdmin } from "@/lib/utils/server-utils"
+import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,11 +14,14 @@ export async function POST(request: NextRequest) {
 
     const name = formData.get("name") as string
     const position = formData.get("position") as string | null
-    const blockId = formData.get("blockId") ? Number.parseInt(formData.get("blockId") as string) : null
+    const blockIdRaw = formData.get("blockId") as string | null
+    const blockId = blockIdRaw && blockIdRaw !== "-1" ? Number(blockIdRaw) : null
     const mandate = formData.get("mandate") as string | null
     const bio = formData.get("bio") as string | null
     const image = formData.get("image") as File | null
-    const isActive = formData.get("isActive") === "true"
+    const isActiveRaw = formData.getAll("isActive")
+    const isActive = isActiveRaw.includes("true")
+    const seniorPosition = formData.get("seniorPosition") as string | null
 
     if (!name) {
       return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 })
@@ -36,9 +39,9 @@ export async function POST(request: NextRequest) {
     // Crear concejal
     const result = await sql`
       INSERT INTO council_members (
-        name, position, block_id, mandate, image_url, bio, is_active
+        name, position, senior_position, block_id, mandate, image_url, bio, is_active
       ) VALUES (
-        ${name}, ${position}, ${blockId}, ${mandate}, ${imageUrl}, ${bio}, ${isActive}
+        ${name}, ${position}, ${seniorPosition}, ${blockId}, ${mandate}, ${imageUrl}, ${bio}, ${isActive}
       )
       RETURNING id
     `

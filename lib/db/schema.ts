@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm"
-import { pgTable, serial, text, timestamp, varchar, integer, boolean, pgEnum } from "drizzle-orm/pg-core"
+import { boolean, integer, pgEnum, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core"
 
 // Enums
 export const documentTypeEnum = pgEnum("document_type", ["ordenanza", "decreto", "resolucion", "comunicacion"])
@@ -35,6 +35,7 @@ export const councilMembers = pgTable("council_members", {
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }),
   position: varchar("position", { length: 255 }),
+  seniorPosition: varchar("senior_position", { length: 255 }),
   blockId: integer("block_id").references(() => politicalBlocks.id),
   mandate: varchar("mandate", { length: 100 }),
   imageUrl: varchar("image_url", { length: 255 }),
@@ -139,6 +140,22 @@ export const activityParticipants = pgTable("activity_participants", {
   councilMemberId: integer("council_member_id")
     .references(() => councilMembers.id)
     .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+export const staff = pgTable("staff", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  position: varchar("position", { length: 255 }).notNull(),
+  blockId: integer("block_id").references(() => politicalBlocks.id),
+  bio: text("bio"),
+  imageUrl: varchar("image_url", { length: 255 }),
+  email: varchar("email", { length: 255 }),
+  telefono: varchar("telefono", { length: 100 }),
+  facebook: varchar("facebook", { length: 255 }),
+  instagram: varchar("instagram", { length: 255 }),
+  twitter: varchar("twitter", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })

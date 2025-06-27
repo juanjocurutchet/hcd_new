@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import type { CouncilMember, PoliticalBlockWithPresident } from "@/actions/council-actions"
-import { useApiRequest } from "@/hooks/useApiRequest" // ✅ Importar hook
+import type { CouncilMember, PoliticalBlockWithPresident } from "@/actions/council-actions";
+import { useApiRequest } from "@/hooks/useApiRequest"; // ✅ Importar hook
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface ConcejalFormProps {
   bloques: PoliticalBlockWithPresident[]
@@ -78,13 +78,31 @@ export default function ConcejalForm({ concejal, bloques }: ConcejalFormProps) {
 
       <div>
         <label htmlFor="position" className="block text-sm font-medium text-gray-700">Cargo</label>
-        <input
-          type="text"
+        <select
           id="position"
           name="position"
-          defaultValue={concejal?.position || ""}
+          defaultValue={concejal?.position || "concejal"}
           className="mt-1 block w-full border rounded-md px-3 py-2"
-        />
+          required
+        >
+          <option value="concejal">Concejal</option>
+          <option value="presidente_bloque">Presidente de bloque</option>
+        </select>
+      </div>
+
+      <div>
+        <label htmlFor="seniorPosition" className="block text-sm font-medium text-gray-700">Cargo superior</label>
+        <select
+          id="seniorPosition"
+          name="seniorPosition"
+          defaultValue={concejal?.seniorPosition || ""}
+          className="mt-1 block w-full border rounded-md px-3 py-2"
+        >
+          <option value="">Sin cargo superior</option>
+          <option value="presidente_hcd">Presidente - H. Concejo Deliberante</option>
+          <option value="vicepresidente1_hcd">Vicepresidente 1° - H. Concejo Deliberante</option>
+          <option value="vicepresidente2_hcd">Vicepresidente 2° - H. Concejo Deliberante</option>
+        </select>
       </div>
 
       <div>
@@ -137,9 +155,15 @@ export default function ConcejalForm({ concejal, bloques }: ConcejalFormProps) {
 
       <div className="flex items-center">
         <input
+          type="hidden"
+          name="isActive"
+          value="false"
+        />
+        <input
           type="checkbox"
           id="isActive"
           name="isActive"
+          value="true"
           defaultChecked={concejal?.isActive ?? true}
           className="h-4 w-4 text-blue-600 border-gray-300 rounded"
         />

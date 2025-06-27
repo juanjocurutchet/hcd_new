@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
-import { isAdmin } from "@/lib/utils/server-utils" // ✅ Importar
+import { isAdmin } from "@/lib/utils/server-utils"; // ✅ Importar
+import { NextRequest, NextResponse } from "next/server"
 
 // ✅ Función de validación compartida
 async function validateAdminAndId(request: NextRequest, idParam: string) {
@@ -41,11 +41,14 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
     const color = formData.get("color") as string
     const presidentIdStr = formData.get("presidentId") as string
     const presidentId = presidentIdStr === "-1" ? null : Number.parseInt(presidentIdStr)
+    const miembrosStr = formData.get("miembros") as string
+    const miembros = miembrosStr ? JSON.parse(miembrosStr) as number[] : []
 
     if (!name) {
       return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 })
     }
 
+    // Actualizar el bloque
     await sql`
       UPDATE political_blocks
       SET
@@ -54,6 +57,22 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
         president_id = ${presidentId}
       WHERE id = ${numericId}
     `
+
+    // Primero, quitar todos los concejales de este bloque
+    await sql`
+      UPDATE council_members
+      SET block_id = NULL
+      WHERE block_id = ${numericId}
+    `
+
+    // Luego, asignar los nuevos miembros
+    if (miembros.length > 0) {
+      await sql`
+        UPDATE council_members
+        SET block_id = ${numericId}
+        WHERE id = ANY(${miembros})
+      `
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
