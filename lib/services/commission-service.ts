@@ -1,5 +1,5 @@
 import { db } from "@/lib/db-singleton"
-import { committees, councilMembers } from "@/lib/db/schema"
+import { committeeMembers, committees, councilMembers } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 
 export async function getAllCommissions() {
@@ -28,13 +28,27 @@ export async function getAllCommissions() {
 
 export async function getCommissionById(id: number) {
   try {
+    // Traer la comisión
     const result = await db
       .select()
       .from(committees)
       .where(eq(committees.id, id))
       .limit(1)
 
-    return result[0] || null
+    const comision = result[0]
+    if (!comision) return null
+
+    // Traer los miembros asociados
+    const miembros = await db
+      .select({ id: councilMembers.id, name: councilMembers.name })
+      .from(committeeMembers)
+      .leftJoin(councilMembers, eq(committeeMembers.councilMemberId, councilMembers.id))
+      .where(eq(committeeMembers.committeeId, id))
+
+    return {
+      ...comision,
+      members: miembros
+    }
   } catch (error) {
     console.error("Error fetching commission by id:", error)
     return null

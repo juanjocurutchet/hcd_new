@@ -21,10 +21,10 @@ export async function uploadFile(file: File, folder = ""): Promise<string> {
         {
           folder: folder || "hcd-lasflores",
           resource_type: "auto",
-          transformation: [
-            { width: 400, height: 400, crop: "fill", gravity: "face" },
-            { quality: "auto", fetch_format: "auto" },
-          ],
+          // transformation: [
+          //   { width: 400, height: 400, crop: "fill", gravity: "face" },
+          //   { quality: "auto", fetch_format: "auto" },
+          // ],
         },
         (error, result) => {
           if (error) {

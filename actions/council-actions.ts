@@ -1,5 +1,6 @@
 import { db } from "@/lib/db-singleton"
 import { councilMembers, politicalBlocks } from "@/lib/db/schema"
+import { getAllCommissions as fetchAllCommissions } from "@/lib/services/commission-service"
 import { and, asc, eq, inArray, sql } from "drizzle-orm"
 
 export type CouncilMember = {
@@ -218,3 +219,5 @@ export async function getSecretarioByBlockId(blockId: number) {
   )
   return result.rows[0] || null
 }
+
+export const getAllCommissions = fetchAllCommissions

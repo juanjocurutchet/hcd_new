@@ -1,6 +1,7 @@
-import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
+import { uploadFile } from "@/lib/storage"
 import { isAdmin } from "@/lib/utils/server-utils"
+import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,8 +10,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
 
-    const body = await request.json()
-    const { name, description, presidentId, secretaryId, memberIds, isActive } = body // ✅ Añadir secretaryId e isActive
+    const formData = await request.formData()
+    const name = formData.get("name") as string
+    const description = formData.get("description") as string
+    const presidentId = formData.get("presidentId") || null
+    const secretaryId = formData.get("secretaryId") || null
+    const isActive = formData.get("isActive") === "true"
+    const memberIds = JSON.parse(formData.get("memberIds") as string || "[]")
+    const proyectosRaw = formData.get("proyectos") as string || "[]"
+    const proyectos = JSON.parse(proyectosRaw)
 
     if (!name) {
       return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 })
@@ -39,6 +47,24 @@ export async function POST(request: NextRequest) {
           )
         `
       }
+    }
+
+    // Guardar proyectos en commission_files
+    for (let i = 0; i < proyectos.length; i++) {
+      const p = proyectos[i]
+      let fileUrl = null
+      // Buscar el archivo en formData (por nombre: archivo_0, archivo_1, ...)
+      const file = formData.get(`archivo_${i}`) as File | null
+      if (file && file.size > 0) {
+        fileUrl = await uploadFile(file, "comisiones")
+      }
+      await sql`
+        INSERT INTO commission_files (
+          committee_id, expediente_number, fecha_entrada, descripcion, despacho, fecha_despacho, file_url
+        ) VALUES (
+          ${committeeId}, ${p.expedienteNumber}, ${p.fechaEntrada}, ${p.descripcion}, ${p.despacho}, ${p.fechaDespacho || null}, ${fileUrl}
+        )
+      `
     }
 
     return NextResponse.json({

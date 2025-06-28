@@ -2,6 +2,7 @@
 
 import type { CouncilMember } from "@/actions/council-actions"
 import { useApiRequest } from "@/hooks/useApiRequest"
+import { Select as AntdSelect } from 'antd'
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 
@@ -147,67 +148,19 @@ export default function BloqueForm({ bloque, concejales, miembrosActuales = [] }
       {/* Sección de gestión de miembros */}
       <div className="space-y-4">
         <h3 className="text-lg font-medium text-gray-900">Miembros del Bloque</h3>
-
-        {/* Miembros actuales */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Miembros actuales:</h4>
-          <div className="space-y-2">
-            {concejalesDisponibles
-              .filter(concejal => miembrosSeleccionados.includes(concejal.id))
-              .map((concejal) => (
-                <div key={concejal.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
-                  <span className="text-sm">{concejal.name} - {concejal.position || "Concejal"}</span>
-                  <button
-                    type="button"
-                    onClick={() => quitarConcejal(concejal.id)}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
-                    Quitar
-                  </button>
-                </div>
-              ))}
-            {concejalesDisponibles.filter(concejal => miembrosSeleccionados.includes(concejal.id)).length === 0 && (
-              <p className="text-sm text-gray-500">No hay miembros asignados</p>
-            )}
-          </div>
-        </div>
-
-        {/* Agregar nuevos miembros */}
-        <div>
-          <label htmlFor="miembrosSelect" className="block text-sm font-medium text-gray-700 mb-2">
-            Agregar miembros:
-          </label>
-          <select
-            id="miembrosSelect"
-            multiple
-            size={5}
-            onChange={(e) => {
-              const selectedOptions = Array.from(e.target.selectedOptions, option => Number(option.value))
-              selectedOptions.forEach(id => {
-                if (!miembrosSeleccionados.includes(id)) {
-                  agregarConcejal(id)
-                }
-              })
-              // Limpiar selección
-              e.target.selectedIndex = -1
-            }}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          >
-            {concejalesDisponibles
-              .filter(concejal => !miembrosSeleccionados.includes(concejal.id))
-              .map((concejal) => (
-                <option key={concejal.id} value={concejal.id}>
-                  {concejal.name} - {concejal.position || "Concejal"}
-                </option>
-              ))}
-          </select>
-          <p className="text-xs text-gray-500 mt-1">
-            Mantén presionado Ctrl (Cmd en Mac) para seleccionar múltiples concejales
-          </p>
-          {concejalesDisponibles.filter(concejal => !miembrosSeleccionados.includes(concejal.id)).length === 0 && (
-            <p className="text-sm text-gray-500 mt-2">Todos los concejales disponibles ya están en el bloque</p>
-          )}
-        </div>
+        <AntdSelect
+          mode="multiple"
+          allowClear
+          style={{ width: '100%' }}
+          placeholder="Agregar miembros"
+          value={miembrosSeleccionados.map(String)}
+          onChange={(values) => setMiembrosSeleccionados(values.map(Number))}
+          optionLabelProp="label"
+          options={concejalesDisponibles.map((concejal) => ({
+            value: concejal.id.toString(),
+            label: `${concejal.name} - ${concejal.position || 'Concejal'}`,
+          }))}
+        />
       </div>
 
       {error && (

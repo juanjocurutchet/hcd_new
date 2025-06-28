@@ -1,8 +1,8 @@
 // app/admin-panel/bloques/page.tsx
 
-import Link from "next/link"
-import Image from "next/image"
 import { getAllPoliticalBlocksWithPresident } from "@/actions/council-actions"
+import Image from "next/image"
+import Link from "next/link"
 
 export default async function BloquesListPage() {
   const bloques = await getAllPoliticalBlocksWithPresident()
@@ -23,19 +23,18 @@ export default async function BloquesListPage() {
         {bloques.map((bloque) => (
           <li
             key={bloque.id}
-            className="flex justify-between items-center p-4 bg-white shadow rounded border border-gray-200"
+            className="flex justify-between items-center p-4 bg-white shadow rounded border border-gray-200 hover:bg-gray-50 transition cursor-pointer"
           >
-            <div className="flex items-center space-x-4">
-              <div
-                className="w-2 h-10 rounded bg-gray-300"
-                style={{ backgroundColor: bloque.color || "#ccc" }}
-              />
-              <div>
-                <p className="text-lg font-semibold">{bloque.name}</p>
-                <p className="text-sm text-gray-500">
-                  Miembros activos: {bloque.memberCount}
-                </p>
-
+            <Link
+              href={`/admin-panel/bloques/${bloque.id}`}
+              className="flex-1 flex items-center space-x-4 min-w-0"
+              prefetch={false}
+              style={{ textDecoration: 'none' }}
+            >
+              <div className="w-2 h-10 rounded" style={{ backgroundColor: bloque.color || '#ccc' }} />
+              <div className="min-w-0">
+                <p className="text-lg font-semibold truncate">{bloque.name}</p>
+                <p className="text-sm text-gray-500 truncate">Miembros activos: {bloque.memberCount}</p>
                 {bloque.president ? (
                   <div className="flex items-center space-x-2 mt-1">
                     {bloque.president.imageUrl && (
@@ -56,15 +55,8 @@ export default async function BloquesListPage() {
                   <p className="text-sm text-gray-400 mt-1">Sin presidente asignado</p>
                 )}
               </div>
-            </div>
-
-            <div className="flex space-x-2">
-              <Link
-                href={`/admin-panel/bloques/${bloque.id}`}
-                className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm"
-              >
-                Editar
-              </Link>
+            </Link>
+            <div className="flex space-x-2 ml-4">
               <Link
                 href={`/admin-panel/bloques/${bloque.id}/eliminar`}
                 className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"

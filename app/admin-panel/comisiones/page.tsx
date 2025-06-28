@@ -15,30 +15,33 @@ export default async function ComisionesPage() {
       </div>
 
       <div className="bg-white border rounded shadow-sm">
-        <ul className="divide-y divide-gray-200">
+        <ul className="space-y-4">
           {comisiones.map((comision) => (
-            <li key={comision.id} className="flex justify-between items-center px-4 py-4 hover:bg-gray-50">
-              <div className="flex-1">
-                <div className="font-medium text-lg">{comision.name}</div>
-                <div className="text-sm text-gray-500">{comision.description}</div>
-                {comision.presidentName && (
-                  <div className="text-xs text-gray-400 mt-1">
-                    Presidente: {comision.presidentName}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Link
-                  href={`/admin-panel/comisiones/${comision.id}`}
-                  className="text-blue-600 hover:underline"
-                  prefetch={false}
-                >
-                  Editar
-                </Link>
+            <li
+              key={comision.id}
+              className="flex justify-between items-center p-4 bg-white shadow rounded border border-gray-200 hover:bg-gray-50 transition cursor-pointer"
+            >
+              <Link
+                href={`/admin-panel/comisiones/${comision.id}`}
+                className="flex-1 flex items-center space-x-4 min-w-0"
+                prefetch={false}
+                style={{ textDecoration: 'none' }}
+              >
+                <div className="w-2 h-10 rounded bg-blue-400" />
+                <div className="min-w-0">
+                  <p className="text-lg font-semibold truncate">{comision.name}</p>
+                  <p className="text-sm text-gray-500 truncate">{comision.description}</p>
+                  {comision.presidentName && (
+                    <div className="text-xs text-gray-400 mt-1 truncate">
+                      Presidente: {comision.presidentName}
+                    </div>
+                  )}
+                </div>
+              </Link>
+              <div className="flex space-x-2 ml-4">
                 <Link
                   href={`/admin-panel/comisiones/${comision.id}/eliminar`}
-                  className="text-red-600 hover:underline"
+                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                   prefetch={false}
                 >
                   Eliminar

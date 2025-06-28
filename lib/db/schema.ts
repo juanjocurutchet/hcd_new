@@ -160,6 +160,19 @@ export const staff = pgTable("staff", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
+export const commissionFiles = pgTable("commission_files", {
+  id: serial("id").primaryKey(),
+  committeeId: integer("committee_id").references(() => committees.id).notNull(),
+  expedienteNumber: varchar("expediente_number", { length: 100 }).notNull(),
+  fechaEntrada: timestamp("fecha_entrada").notNull(),
+  descripcion: text("descripcion").notNull(),
+  despacho: boolean("despacho").default(false).notNull(),
+  fechaDespacho: timestamp("fecha_despacho"),
+  fileUrl: varchar("file_url", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
 // Relaciones
 export const usersRelations = relations(users, ({ many }) => ({
   news: many(news),

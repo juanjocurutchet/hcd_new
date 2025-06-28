@@ -1,6 +1,6 @@
+import { getCommissionById } from "@/lib/services/commission-service"
 import { notFound } from "next/navigation"
 import { ComisionForm } from "../components/comision-form"
-import { getCommissionById } from "@/lib/services/commission-service"
 
 interface PageProps {
   params: Promise<{ id: string }> // ✅ Cambiar a Promise
@@ -15,7 +15,7 @@ export default async function EditarComisionPage({ params }: PageProps) {
   if (!comision) notFound()
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="w-full py-8 px-4">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Editar Comisión</h1>
         <p className="text-gray-600">Modifica la información de la comisión</p>
