@@ -59,7 +59,16 @@ export async function GET(request: NextRequest, context: { params: { slug: strin
       `
     }
 
-    return NextResponse.json({ ...ordinance, modificatorias, modificaOrdenanzas })
+    // Buscar ordenanzas que esta ordenanza deroga
+    const derogaRows = await sql`
+      SELECT id, approval_number, title, year FROM ordinances WHERE derogada_por = ${ordinance.approval_number}
+    `
+    let derogaOrdenanzas = []
+    if (derogaRows.length > 0) {
+      derogaOrdenanzas = derogaRows
+    }
+
+    return NextResponse.json({ ...ordinance, modificatorias, modificaOrdenanzas, derogaOrdenanzas })
   } catch (error) {
     console.error('Error en GET /api/ordinances/[slug]:', error)
     return NextResponse.json(
@@ -165,12 +174,13 @@ export async function PUT(request: NextRequest, context: { params: { slug: strin
     }
 
     // Actualizar la ordenanza
-    const result = await sql`
-      UPDATE ordinances SET approval_number=${approval_number}, title=${title}, year=${year}, type=${type}, category=${category}, notes=${notes}, is_active=${is_active}, slug=${slugValue}
-      ${file_url !== undefined ? sql`, file_url=${file_url}` : sql``}
-      WHERE id = ${id}
-      RETURNING *
-    `;
+    let updateQuery = sql`
+      UPDATE ordinances SET approval_number=${approval_number}, title=${title}, year=${year}, type=${type}, category=${category}, notes=${notes}, is_active=${is_active}, slug=${slugValue}`;
+    if (file_url !== undefined) {
+      updateQuery = sql`${updateQuery}, file_url=${file_url}`;
+    }
+    updateQuery = sql`${updateQuery} WHERE id = ${id} RETURNING *`;
+    const result = await updateQuery;
     const ordinance = result[0];
 
     // Limpiar relaciones anteriores

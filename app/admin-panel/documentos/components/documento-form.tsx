@@ -72,6 +72,10 @@ export function DocumentoForm({ documento = null }: { documento?: any | null }) 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [removeFile, setRemoveFile] = useState(false)
+  const [modificaOptions, setModificaOptions] = useState<{ value: string; label: string }[]>([])
+  const [derogaOptions, setDerogaOptions] = useState<{ value: string; label: string }[]>([])
+  const [modificaSelected, setModificaSelected] = useState<{ value: string; label: string }[]>([])
+  const [derogaSelected, setDerogaSelected] = useState<{ value: string; label: string }[]>([])
 
   useEffect(() => {
     fetch("/api/ordinances/types")
@@ -117,11 +121,38 @@ export function DocumentoForm({ documento = null }: { documento?: any | null }) 
 
   // Cargar las ordenanzas que modifica cuando se edita un documento
   useEffect(() => {
+    // Precargar modificadas
     if (documento?.modificaOrdenanzas) {
-      const ids = documento.modificaOrdenanzas.map((o: any) => o.id.toString())
-      setModificadasIds(ids)
+      const opts = documento.modificaOrdenanzas.map((o: any) => ({ value: o.id.toString(), label: getLabelCorto(o) }))
+      setModificaSelected(opts)
+      setModificadasIds(opts.map((opt: { value: string; label: string }) => opt.value))
+    }
+    // Precargar derogadas
+    if (documento?.derogaOrdenanzas) {
+      const opts = documento.derogaOrdenanzas.map((o: any) => ({ value: o.id.toString(), label: getLabelCorto(o) }))
+      setDerogaSelected(opts)
+      setDerogadasIds(opts.map((opt: { value: string; label: string }) => opt.value))
     }
   }, [documento])
+
+  // Helpers para obtener el label completo y el label corto
+  const getLabelCompleto = (o: any) => o?.approval_number ? `N° ${o.approval_number}${o.title ? ` - ${o.title}` : ''}${o.year ? ` (${o.year})` : ''}` : o?.id?.toString() || "";
+  const getLabelCorto = (o: any) => o?.approval_number ? o.approval_number.toString() : o?.id?.toString() || "";
+
+  // Búsqueda remota para modificadas
+  const handleSearchModifica = async (value: string) => {
+    if (!value) return;
+    const res = await fetch(`/api/ordinances/lista-simple?search=${encodeURIComponent(value)}`)
+    const data = await res.json()
+    setModificaOptions((data || []).map((o: any) => ({ value: o.id.toString(), label: getLabelCompleto(o) })))
+  }
+  // Búsqueda remota para derogadas
+  const handleSearchDeroga = async (value: string) => {
+    if (!value) return;
+    const res = await fetch(`/api/ordinances/lista-simple?search=${encodeURIComponent(value)}`)
+    const data = await res.json()
+    setDerogaOptions((data || []).map((o: any) => ({ value: o.id.toString(), label: getLabelCompleto(o) })))
+  }
 
   const handleChange = (e: any) => {
     const { name, value, type, checked } = e.target
@@ -280,9 +311,14 @@ export function DocumentoForm({ documento = null }: { documento?: any | null }) 
                   mode="multiple"
                   value={modificadasIds}
                   onChange={setModificadasIds}
-                  options={ordenanzas}
+                  options={[...modificaSelected, ...modificaOptions]}
                   style={{ width: "100%" }}
                   placeholder="Buscar y seleccionar ordenanzas que modifica"
+                  showSearch
+                  filterOption={false}
+                  onSearch={handleSearchModifica}
+                  notFoundContent={null}
+                  optionLabelProp="label"
                 />
               </div>
             )}
@@ -293,9 +329,14 @@ export function DocumentoForm({ documento = null }: { documento?: any | null }) 
                   mode="multiple"
                   value={derogadasIds}
                   onChange={setDerogadasIds}
-                  options={ordenanzas}
+                  options={[...derogaSelected, ...derogaOptions]}
                   style={{ width: "100%" }}
                   placeholder="Buscar y seleccionar ordenanzas que deroga"
+                  showSearch
+                  filterOption={false}
+                  onSearch={handleSearchDeroga}
+                  notFoundContent={null}
+                  optionLabelProp="label"
                 />
               </div>
             )}
