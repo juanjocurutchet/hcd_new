@@ -47,10 +47,12 @@ export default function LegislacionPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [types, setTypes] = useState<Type[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
 
   // Filtros
   const [search, setSearch] = useState("")
+  const [searchNumber, setSearchNumber] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedType, setSelectedType] = useState("all")
   const [selectedYear, setSelectedYear] = useState("all")
@@ -73,12 +75,23 @@ export default function LegislacionPage() {
     fetchTypes()
   }, [])
 
-  useEffect(() => {
-    fetchOrdinances()
-  }, [search, selectedCategory, selectedType, selectedYear, isActive, currentPage])
+    useEffect(() => {
+    // Solo hacer la búsqueda cuando cambian los filtros de categoría, tipo, año o estado
+    // La búsqueda por texto se maneja con el botón o Enter
+    const hasFilters =
+      (selectedCategory && selectedCategory !== "all") ||
+      (selectedType && selectedType !== "all") ||
+      (selectedYear && selectedYear !== "all") ||
+      (isActive && isActive !== "all")
+
+    if (hasFilters || currentPage > 1) {
+      fetchOrdinances()
+    }
+  }, [selectedCategory, selectedType, selectedYear, isActive, currentPage])
 
   const fetchOrdinances = async () => {
     setLoading(true)
+    setHasSearched(true)
     try {
       const params = new URLSearchParams({
         page: currentPage.toString(),
@@ -86,6 +99,7 @@ export default function LegislacionPage() {
       })
 
       if (search) params.append("search", search)
+      if (searchNumber) params.append("searchNumber", searchNumber)
       if (selectedCategory && selectedCategory !== "all") params.append("category", selectedCategory)
       if (selectedType && selectedType !== "all") params.append("type", selectedType)
       if (selectedYear && selectedYear !== "all") params.append("year", selectedYear)
@@ -141,11 +155,15 @@ export default function LegislacionPage() {
 
   const clearFilters = () => {
     setSearch("")
+    setSearchNumber("")
     setSelectedCategory("all")
     setSelectedType("all")
     setSelectedYear("all")
     setIsActive("all")
     setCurrentPage(1)
+    setHasSearched(false)
+    setOrdinances([])
+    setPagination(null)
   }
 
   const formatDate = (dateString: string) => {
@@ -196,10 +214,11 @@ export default function LegislacionPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Búsqueda */}
+          {/* Primera fila: Búsquedas */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {/* Búsqueda por texto */}
             <div>
-              <Label htmlFor="search">Buscar</Label>
+              <Label htmlFor="search">Buscar por texto</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
@@ -207,11 +226,57 @@ export default function LegislacionPage() {
                   placeholder="Buscar por título o notas..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      fetchOrdinances()
+                    }
+                  }}
                   className="pl-10"
                 />
               </div>
             </div>
 
+            {/* Búsqueda por número */}
+            <div>
+              <Label htmlFor="searchNumber">Buscar por número</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="searchNumber"
+                  placeholder="Ej: 1234, 567..."
+                  value={searchNumber}
+                  onChange={(e) => setSearchNumber(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      fetchOrdinances()
+                    }
+                  }}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Año */}
+            <div>
+              <Label htmlFor="year">Año</Label>
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos los años" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los años</SelectItem>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Segunda fila: Filtros */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             {/* Categoría */}
             <div>
               <Label htmlFor="category">Categoría</Label>
@@ -248,24 +313,6 @@ export default function LegislacionPage() {
               </Select>
             </div>
 
-            {/* Año */}
-            <div>
-              <Label htmlFor="year">Año</Label>
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos los años" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los años</SelectItem>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Estado */}
             <div>
               <Label htmlFor="status">Estado</Label>
@@ -280,6 +327,17 @@ export default function LegislacionPage() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Botón de búsqueda */}
+          <div className="flex justify-center mb-4">
+            <Button
+              type="button"
+              onClick={fetchOrdinances}
+              className="px-8"
+            >
+              Buscar Ordenanzas
+            </Button>
           </div>
 
           <div className="flex justify-between items-center mt-4">
@@ -303,6 +361,14 @@ export default function LegislacionPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-2 text-gray-600">Cargando ordenanzas...</p>
           </div>
+        ) : !hasSearched ? (
+          <Card>
+            <CardContent className="text-center py-8">
+              <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-2">Utiliza los filtros de búsqueda para encontrar ordenanzas</p>
+              <p className="text-sm text-gray-500">Puedes buscar por texto, número, año, categoría, tipo o estado</p>
+            </CardContent>
+          </Card>
         ) : !Array.isArray(ordinances) || ordinances.length === 0 ? (
           <Card>
             <CardContent className="text-center py-8">

@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
+    const searchNumber = searchParams.get('searchNumber')
     const category = searchParams.get('category')
     const type = searchParams.get('type')
     const year = searchParams.get('year')
@@ -29,6 +30,11 @@ export async function GET(request: NextRequest) {
     if (search) {
       query += ` AND (title ILIKE $${params.length + 1} OR notes ILIKE $${params.length + 1})`
       params.push(`%${search}%`)
+    }
+
+    if (searchNumber) {
+      query += ` AND CAST(approval_number AS TEXT) ILIKE $${params.length + 1}`
+      params.push(`%${searchNumber}%`)
     }
 
     if (category && category !== "all") {
