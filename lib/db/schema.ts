@@ -173,6 +173,57 @@ export const commissionFiles = pgTable("commission_files", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
+export const documentModifica = pgTable("document_modifica", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull().references(() => documents.id),
+  targetId: integer("target_id").notNull().references(() => documents.id),
+})
+
+export const documentDeroga = pgTable("document_deroga", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").notNull().references(() => documents.id),
+  targetId: integer("target_id").notNull().references(() => documents.id),
+})
+
+// Tabla para categorías de ordenanzas
+export const ordinanceCategories = pgTable('ordinance_categories', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  created_at: timestamp('created_at').defaultNow(),
+  updated_at: timestamp('updated_at').defaultNow(),
+})
+
+// Tabla para tipos de ordenanzas
+export const ordinanceTypes = pgTable('ordinance_types', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  created_at: timestamp('created_at').defaultNow(),
+  updated_at: timestamp('updated_at').defaultNow(),
+})
+
+// Tabla principal de ordenanzas
+export const ordinances = pgTable('ordinances', {
+  id: serial('id').primaryKey(),
+  approval_number: integer('approval_number').notNull(),
+  title: text('title').notNull(),
+  year: integer('year').notNull(),
+  type: text('type').notNull(),
+  category: text('category').notNull(),
+  notes: text('notes'),
+  is_active: boolean('is_active').default(true),
+  file_url: text('file_url'),
+  slug: text('slug').unique(),
+  created_at: timestamp('created_at').defaultNow(),
+  updated_at: timestamp('updated_at').defaultNow(),
+})
+
+export const ordinance_modifica = pgTable('ordinance_modifica', {
+  id: serial('id').primaryKey(),
+  ordinance_id: integer('ordinance_id').notNull().references(() => ordinances.id),
+  modificadora_numero: integer('modificadora_numero').notNull(),
+  observaciones: text('observaciones'),
+});
+
 // Relaciones
 export const usersRelations = relations(users, ({ many }) => ({
   news: many(news),
@@ -241,5 +292,17 @@ export const activityParticipantsRelations = relations(activityParticipants, ({ 
   councilMember: one(councilMembers, {
     fields: [activityParticipants.councilMemberId],
     references: [councilMembers.id],
+  }),
+}))
+
+// Relaciones para ordenanzas
+export const ordinancesRelations = relations(ordinances, ({ one }) => ({
+  category: one(ordinanceCategories, {
+    fields: [ordinances.category],
+    references: [ordinanceCategories.name],
+  }),
+  type: one(ordinanceTypes, {
+    fields: [ordinances.type],
+    references: [ordinanceTypes.name],
   }),
 }))

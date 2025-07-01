@@ -1,7 +1,7 @@
 // app/admin-panel/actividades/page.tsx
-import Link from "next/link"
-import { format } from "date-fns"
 import { getAllActivities } from "@/lib/services/activity-service"
+import { format } from "date-fns"
+import Link from "next/link"
 
 export default async function ActividadesPage() {
   const actividades = await getAllActivities()
@@ -15,50 +15,48 @@ export default async function ActividadesPage() {
         </Link>
       </div>
 
-      <div className="bg-white border rounded shadow-sm">
-        <ul className="divide-y divide-gray-200">
-          {actividades.map((actividad) => (
-            <li key={actividad.id} className="flex justify-between items-center px-4 py-4 hover:bg-gray-50">
-              <div className="flex-1">
-                <div className="font-medium text-lg">{actividad.title}</div>
-                <div className="text-sm text-gray-500">
-                  {format(new Date(actividad.date), "dd/MM/yyyy")} — {actividad.isPublished ? "Publicada" : "No publicada"}
-                </div>
-              </div>
-
-              {/* ✅ Botones de acción */}
-              <div className="flex gap-2">
-                <Link
-                  href={`/admin-panel/actividades/${actividad.id}`}
-                  className="text-blue-600 hover:underline"
-                  prefetch={false}
-                >
-                  Editar
-                </Link>
-                <Link
-                  href={`/admin-panel/actividades/${actividad.id}/eliminar`}
-                  className="text-red-600 hover:underline"
-                  prefetch={false}
-                >
-                  Eliminar
-                </Link>
-              </div>
-            </li>
-          ))}
-        </ul>
-
-        {actividades.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <p>No hay actividades creadas aún.</p>
+      <ul className="space-y-4">
+        {actividades.map((actividad) => (
+          <li
+            key={actividad.id}
+            className="flex justify-between items-center p-4 bg-white shadow rounded border border-gray-200 hover:bg-gray-50 transition cursor-pointer"
+          >
             <Link
-              href="/admin-panel/actividades/nueva"
-              className="text-blue-600 hover:underline mt-2 inline-block"
+              href={`/admin-panel/actividades/${actividad.id}`}
+              className="flex-1 flex items-center space-x-4 min-w-0"
+              prefetch={false}
+              style={{ textDecoration: 'none' }}
             >
-              Crear la primera actividad
+              <div className="w-2 h-10 rounded bg-orange-400" />
+              <div className="min-w-0">
+                <p className="text-lg font-semibold truncate">{actividad.title}</p>
+                <p className="text-sm text-gray-500 truncate">
+                  {format(new Date(actividad.date), "dd/MM/yyyy")} — {actividad.isPublished ? "Publicada" : "No publicada"}
+                </p>
+              </div>
             </Link>
-          </div>
-        )}
-      </div>
+            <Link
+              href={`/admin-panel/actividades/${actividad.id}/eliminar`}
+              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+              prefetch={false}
+            >
+              Eliminar
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      {actividades.length === 0 && (
+        <div className="text-center py-8 text-gray-500">
+          <p>No hay actividades creadas aún.</p>
+          <Link
+            href="/admin-panel/actividades/nueva"
+            className="text-blue-600 hover:underline mt-2 inline-block"
+          >
+            Crear la primera actividad
+          </Link>
+        </div>
+      )}
     </div>
   )
 }

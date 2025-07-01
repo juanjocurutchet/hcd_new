@@ -38,49 +38,48 @@ export default async function PersonalPage() {
       </div>
       <div className="space-y-6">
         {Object.entries(personalPorCargo).map(([cargo, personas]) => (
-          <div key={cargo} className="bg-white border rounded shadow-sm">
-            <h2 className="px-4 py-3 font-semibold bg-gray-100 border-b">{cargoLegible(cargo)}</h2>
-            <ul>
+          <div key={cargo}>
+            <h2 className="px-4 py-3 font-semibold bg-gray-100 border rounded-t">{cargoLegible(cargo)}</h2>
+            <ul className="space-y-2 border-l border-r border-b rounded-b p-2">
               {personas.map((p) => (
                 <li
                   key={p.id}
-                  className="flex justify-between items-center px-4 py-3 border-t hover:bg-gray-50"
+                  className="flex justify-between items-center p-4 bg-white shadow rounded border border-gray-200 hover:bg-gray-50 transition cursor-pointer"
                 >
-                  <div className="flex items-center gap-4">
-                    {p.imageUrl ? (
-                      <Image
-                        src={p.imageUrl}
-                        alt={p.name}
-                        width={40}
-                        height={40}
-                        className="rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-300 rounded-full" />
-                    )}
-                    <div>
-                      <div className="font-medium">{p.name}</div>
-                      {p.blockName && (
-                        <div className="text-gray-500 text-sm mb-1">{p.blockName}</div>
+                  <Link
+                    href={`/admin-panel/personal/${p.id}`}
+                    className="flex-1 flex items-center space-x-4 min-w-0"
+                    prefetch={false}
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <div className="w-2 h-10 rounded bg-teal-400" />
+                    <div className="flex items-center gap-4 min-w-0">
+                      {p.imageUrl ? (
+                        <Image
+                          src={p.imageUrl}
+                          alt={p.name}
+                          width={40}
+                          height={40}
+                          className="rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-gray-300 rounded-full" />
                       )}
+                      <div className="min-w-0">
+                        <p className="text-lg font-semibold truncate">{p.name}</p>
+                        {p.blockName && (
+                          <p className="text-sm text-gray-500 truncate">{p.blockName}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/admin-panel/personal/${p.id}`}
-                      className="text-blue-600 hover:underline"
-                      prefetch={false}
-                    >
-                      Editar
-                    </Link>
-                    <Link
-                      href={`/admin-panel/personal/${p.id}/eliminar`}
-                      className="text-red-600 hover:underline"
-                      prefetch={false}
-                    >
-                      Eliminar
-                    </Link>
-                  </div>
+                  </Link>
+                  <Link
+                    href={`/admin-panel/personal/${p.id}/eliminar`}
+                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                    prefetch={false}
+                  >
+                    Eliminar
+                  </Link>
                 </li>
               ))}
             </ul>

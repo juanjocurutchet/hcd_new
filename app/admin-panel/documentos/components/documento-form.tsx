@@ -1,16 +1,17 @@
 "use client"
 
-import { SetStateAction, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Card, CardContent } from "@/components/ui/card"
-import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select as AntdSelect } from "antd"
+import "dayjs/locale/es"
+import { AlertCircle } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 interface Documento {
   id?: string;
@@ -19,40 +20,121 @@ interface Documento {
   type?: string;
   content?: string;
   isPublished?: boolean;
+  status?: string;
+  topics?: string[];
+  keywords?: string[];
+  summary?: string;
+  observations?: string;
+  authors?: string[];
+  block?: string;
+  internalNotes?: string;
+  sanctionDate?: string;
+  publicationDate?: string;
 }
 
-export function DocumentoForm({ documento = null }: { documento?: Documento | null }) {
+const TIPO_DISPOSICION_OPTIONS = [
+  { value: "ordenanza", label: "Ordenanza" },
+  { value: "decreto", label: "Decreto" },
+  { value: "comunicacion", label: "Comunicación" },
+  { value: "resolucion", label: "Resolución" },
+];
+
+const ESTADO_OPTIONS = [
+  { value: "vigente", label: "Vigente" },
+  { value: "derogada", label: "Derogada" },
+  { value: "modificadora", label: "Modificadora" },
+];
+
+export function DocumentoForm({ documento = null }: { documento?: any | null }) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [formData, setFormData] = useState({
+    tipo_disposicion: documento?.tipo_disposicion || "ordenanza",
+    type: documento?.type || "",
+    category: documento?.category || "",
+    number: documento?.number || documento?.approval_number?.toString() || "",
+    year: documento?.year || "",
+    approval_number: documento?.approval_number || "",
     title: documento?.title || "",
-    number: documento?.number || "",
-    type: documento?.type || "ordenanza",
-    content: documento?.content || "",
-    isPublished: documento?.isPublished || false,
+    notes: documento?.notes || "",
+    is_active: documento?.is_active ?? true,
+    estado: documento?.estado || "vigente",
+    derogada_por_numero: documento?.derogada_por_numero || "",
+    file_url: documento?.file_url || "",
   })
+  const [tipos, setTipos] = useState<{ value: string; label: string }[]>([])
+  const [categorias, setCategorias] = useState<{ value: string; label: string }[]>([])
+  const [ordenanzas, setOrdenanzas] = useState<{ value: string; label: string }[]>([])
+  const [modificadasIds, setModificadasIds] = useState<string[]>([])
+  const [derogadasIds, setDerogadasIds] = useState<string[]>([])
   const [file, setFile] = useState<File | null>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [removeFile, setRemoveFile] = useState(false)
 
-  const handleChange = (e: { target: { name: any; value: any; type: any; checked: any } }) => {
+  useEffect(() => {
+    fetch("/api/ordinances/types")
+      .then(res => res.json())
+      .then(data => {
+        const tiposData = Array.isArray(data) ? data : data.data;
+        setTipos(
+          (tiposData || []).map((t: any) => ({
+            value: t.name,
+            label: t.name.charAt(0).toUpperCase() + t.name.slice(1)
+          }))
+        );
+      });
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/ordinances/categories")
+      .then(res => res.json())
+      .then(data => {
+        const cats = Array.isArray(data) ? data : data.data;
+        setCategorias(
+          (cats || []).map((c: any) => ({
+            value: c.name,
+            label: c.name.charAt(0).toUpperCase() + c.name.slice(1)
+          }))
+        );
+      });
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/ordinances/lista-simple")
+      .then(res => res.json())
+      .then(data => {
+        const docs = Array.isArray(data) ? data : data.data
+        setOrdenanzas(
+          (docs || []).map((o: any) => ({
+            value: o.id.toString(),
+            label: `${o.approval_number ? `N° ${o.approval_number}` : ''} ${o.title ? `- ${o.title}` : ''} ${o.year ? `(${o.year})` : ''}`.trim()
+          }))
+        )
+      })
+  }, [])
+
+  // Cargar las ordenanzas que modifica cuando se edita un documento
+  useEffect(() => {
+    if (documento?.modificaOrdenanzas) {
+      const ids = documento.modificaOrdenanzas.map((o: any) => o.id.toString())
+      setModificadasIds(ids)
+    }
+  }, [documento])
+
+  const handleChange = (e: any) => {
     const { name, value, type, checked } = e.target
     setFormData({
       ...formData,
       [name]: type === "checkbox" ? checked : value,
     })
   }
-
-  const handleSelectChange = (name: string, value: any) => {
-    setFormData({
-      ...formData,
-      [name]: value,
-    })
-  }
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files && files[0]) {
       setFile(files[0])
+      setRemoveFile(false)
     }
   }
 
@@ -60,133 +142,212 @@ export function DocumentoForm({ documento = null }: { documento?: Documento | nu
     e.preventDefault()
     setIsSubmitting(true)
     setError("")
-
     try {
       const data = new FormData()
-      data.append("title", formData.title)
-      data.append("number", formData.number)
+      const approval_number = formData.number;
+      data.append("tipo_disposicion", formData.tipo_disposicion)
       data.append("type", formData.type)
-      data.append("content", formData.content)
-      data.append("isPublished", formData.isPublished.toString())
-      data.append("authorId", "1") // Temporal, debería venir del usuario autenticado
+      data.append("category", formData.category)
+      data.append("number", formData.number)
+      data.append("year", formData.year)
+      data.append("approval_number", approval_number)
+      data.append("title", formData.title)
+      data.append("notes", formData.notes)
+      data.append("is_active", formData.is_active ? "true" : "false")
+      data.append("estado", formData.estado)
+      if (formData.estado === "derogada") {
+        data.append("derogada_por_numero", formData.derogada_por_numero)
+      }
+      data.append("modificadasIds", JSON.stringify(modificadasIds))
+      data.append("derogadasIds", JSON.stringify(derogadasIds))
       if (file) {
         data.append("file", file)
       }
-
-      const url = documento ? `/api/documents/${documento.id}` : "/api/documents/create"
+      if (removeFile) {
+        data.append("eliminar_archivo", "true")
+      }
+      const url = documento ? `/api/ordinances/${documento.id}` : "/api/ordinances"
       const method = documento ? "PUT" : "POST"
-
-      const response = await fetch(url, {
-        method,
-        body: data,
-      })
-
+      const response = await fetch(url, { method, body: data })
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || "Error al guardar el documento")
+        throw new Error(errorData.error || "Error al guardar la ordenanza")
       }
-
       router.push("/admin-panel/documentos")
       router.refresh()
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message)
-      } else {
-        setError("An unknown error occurred")
-      }
+      setError(err instanceof Error ? err.message : "Error desconocido")
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  const handleDelete = async () => {
+    if (!documento?.id) return
+    setIsDeleting(true)
+    try {
+      const res = await fetch(`/api/ordinances/${documento.id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Error al eliminar la disposición")
+      router.push("/admin-panel/documentos")
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error desconocido")
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteDialog(false)
+    }
+  }
+
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="title">Título</Label>
-            <Input
-              id="title"
-              name="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              required
-              placeholder="Título del documento"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="number">Número</Label>
-              <Input
-                id="number"
-                name="number"
-                value={formData.number}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                placeholder="Número del documento"
-              />
+    <div className="flex justify-center w-full">
+      <Card className="w-full max-w-5xl mx-auto shadow-lg">
+        <CardContent className="pt-8 px-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>Tipo de disposición *</Label>
+                <AntdSelect
+                  value={formData.tipo_disposicion}
+                  onChange={value => setFormData({ ...formData, tipo_disposicion: value })}
+                  options={TIPO_DISPOSICION_OPTIONS}
+                  style={{ width: "100%" }}
+                  placeholder="Seleccionar tipo de disposición"
+                />
+              </div>
+              <div>
+                <Label>Número *</Label>
+                <Input name="number" value={formData.number} onChange={handleChange} required />
+              </div>
+              <div>
+                <Label>Año *</Label>
+                <Input name="year" value={formData.year} onChange={handleChange} required />
+              </div>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="type">Tipo</Label>
-              <Select value={formData.type} onValueChange={(value: any) => handleSelectChange("type", value)}>
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="Seleccionar tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ordenanza">Ordenanza</SelectItem>
-                  <SelectItem value="decreto">Decreto</SelectItem>
-                  <SelectItem value="resolucion">Resolución</SelectItem>
-                  <SelectItem value="comunicacion">Comunicación</SelectItem>
-                </SelectContent>
-              </Select>
+            <div>
+              <Label>Título *</Label>
+              <Input name="title" value={formData.title} onChange={handleChange} required />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="content">Contenido</Label>
-            <Textarea
-              id="content"
-              name="content"
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              placeholder="Contenido del documento"
-              rows={10}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="file">Archivo</Label>
-            <Input id="file" name="file" type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="isPublished"
-              name="isPublished"
-              checked={formData.isPublished}
-              onCheckedChange={(checked: any) => setFormData({ ...formData, isPublished: checked })}
-            />
-            <Label htmlFor="isPublished">Publicar inmediatamente</Label>
-          </div>
-
-          <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
-              Cancelar
-            </Button>
-            <Button type="submit" className="bg-[#0e4c7d] hover:bg-[#0a3d68]" disabled={isSubmitting}>
-              {isSubmitting ? "Guardando..." : documento ? "Actualizar" : "Crear"}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Categoría *</Label>
+                <AntdSelect
+                  value={formData.category}
+                  onChange={value => setFormData({ ...formData, category: value })}
+                  options={categorias}
+                  style={{ width: "100%" }}
+                  placeholder="Seleccionar categoría"
+                />
+              </div>
+              <div>
+                <Label>Tipo *</Label>
+                <AntdSelect
+                  value={formData.type}
+                  onChange={value => setFormData({ ...formData, type: value })}
+                  options={tipos}
+                  style={{ width: "100%" }}
+                  placeholder="Seleccionar tipo"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Estado *</Label>
+                <AntdSelect
+                  value={formData.estado}
+                  onChange={value => setFormData({ ...formData, estado: value })}
+                  options={ESTADO_OPTIONS}
+                  style={{ width: "100%" }}
+                  placeholder="Seleccionar estado"
+                />
+                {formData.estado === "derogada" && (
+                  <div className="mt-2">
+                    <Label>N° Ordenanza que la deroga</Label>
+                    <Input name="derogada_por_numero" value={formData.derogada_por_numero} onChange={handleChange} />
+                  </div>
+                )}
+              </div>
+            </div>
+            {formData.tipo_disposicion === "ordenanza" && (
+              <div>
+                <Label>Modifica ordenanzas N°</Label>
+                <AntdSelect
+                  mode="multiple"
+                  value={modificadasIds}
+                  onChange={setModificadasIds}
+                  options={ordenanzas}
+                  style={{ width: "100%" }}
+                  placeholder="Buscar y seleccionar ordenanzas que modifica"
+                />
+              </div>
+            )}
+            {formData.tipo_disposicion === "ordenanza" && (
+              <div>
+                <Label>Deroga ordenanzas N°</Label>
+                <AntdSelect
+                  mode="multiple"
+                  value={derogadasIds}
+                  onChange={setDerogadasIds}
+                  options={ordenanzas}
+                  style={{ width: "100%" }}
+                  placeholder="Buscar y seleccionar ordenanzas que deroga"
+                />
+              </div>
+            )}
+            <div>
+              <Label>Notas</Label>
+              <Textarea name="notes" value={formData.notes} onChange={handleChange} />
+            </div>
+            <div>
+              <Label>Adjuntar archivo</Label>
+              {formData.file_url && !removeFile && (
+                <div className="mb-2 flex items-center gap-2">
+                  <a href={formData.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver archivo actual</a>
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setRemoveFile(true); setFile(null); }}>Eliminar archivo</Button>
+                </div>
+              )}
+              <Input type="file" accept=".pdf,.doc,.docx,.jpg,.png" onChange={handleFileChange} />
+              {removeFile && (
+                <div className="text-sm text-red-600 mt-1">El archivo actual será eliminado.</div>
+              )}
+            </div>
+            <div className="flex gap-4 justify-end">
+              <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
+                {isSubmitting ? "Guardando..." : documento ? "Actualizar" : "Crear"}
+              </Button>
+              {documento && documento.id && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={isDeleting}
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  {isDeleting ? "Eliminando..." : "Eliminar"}
+                </Button>
+              )}
+            </div>
+          </form>
+          {/* Diálogo de confirmación de borrado */}
+          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <DialogContent>
+              <DialogTitle>¿Eliminar disposición?</DialogTitle>
+              <DialogDescription>
+                Esta acción eliminará la disposición de forma permanente. ¿Deseas continuar?
+              </DialogDescription>
+              <p>¿Estás seguro de que deseas eliminar esta disposición? Esta acción no se puede deshacer.</p>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>Cancelar</Button>
+                <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>Eliminar</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

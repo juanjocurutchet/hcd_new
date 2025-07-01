@@ -1,6 +1,7 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { getDocumentById, updateDocument, deleteDocument } from "@/lib/services/document-service"
+import { deleteDocument, getDocumentById, updateOrdinance } from "@/lib/services/document-service"
+import { uploadFile } from "@/lib/storage"
 import { isAdmin } from "@/lib/utils/server-utils"
+import { type NextRequest, NextResponse } from "next/server"
 
 async function validateAdminAndId(request: NextRequest, idParam: string) {
   if (!(await isAdmin(request))) {
@@ -42,30 +43,41 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const formData = await request.formData()
 
+    const approval_number = Number(formData.get("approval_number"))
     const title = formData.get("title") as string
-    const number = formData.get("number") as string | null
-    const type = formData.get("type") as "ordenanza" | "decreto" | "resolucion" | "comunicacion"
-    const content = formData.get("content") as string | null
+    const year = Number(formData.get("year"))
+    const tipo_disposicion = formData.get("tipo_disposicion") as string
+    const type = formData.get("type") as string
+    const category = formData.get("category") as string
+    const notes = formData.get("notes") as string | undefined
+    const is_active = formData.get("is_active") === "true"
     const file = formData.get("file") as File | null
-    const publishedAtStr = formData.get("publishedAt") as string | null
-    const isPublished = formData.get("isPublished") === "true"
+    let file_url = undefined
+    if (file && file.size > 0) {
+      file_url = await uploadFile(file, "ordenanzas")
+    }
+    const slug = formData.get("slug") as string | undefined
+    const modificadasIds = JSON.parse(formData.get("modificadasIds") as string || "[]")
+    const derogadasIds = JSON.parse(formData.get("derogadasIds") as string || "[]")
 
-    const publishedAt = publishedAtStr ? new Date(publishedAtStr) : undefined
-
-    const result = await updateDocument({
+    const result = await updateOrdinance({
       id,
+      approval_number,
       title,
-      number: number || undefined,
+      year,
       type,
-      content: content || undefined,
-      file,
-      publishedAt,
-      isPublished,
+      category,
+      notes,
+      is_active,
+      file_url,
+      slug,
+      modificadasIds,
+      derogadasIds,
     })
 
     return NextResponse.json(result)
   } catch (error: any) {
-    console.error(`Error actualizando documento con id ${params.id}:`, error)
+    console.error(`Error actualizando ordenanza con id ${params.id}:`, error)
     return NextResponse.json({ error: error.message || "Error interno del servidor" }, { status: 500 })
   }
 }
